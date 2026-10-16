@@ -1,0 +1,46 @@
+:root {
+  /* Palette: warm paper, charcoal ink, taupe, one oxblood accent. */
+  --paper: #f5f0e8;
+  --paper-raised: #fbf8f3;
+  --paper-sunk: #ece5da;
+  --ink: #1f1d1b;
+  --ink-soft: #3d3934;
+  --taupe: #6e655b;
+  --taupe-light: #a2978a;
+  --line: #d9cfc2;
+  --line-strong: #b9ad9e;
+  --accent: #7c2a24;
+  --accent-ink: #fbf8f3;
+  --accent-soft: #f1e2dc;
+  --danger: #9b2c1f;
+  --danger-soft: #f6e1dc;
+  --ok: #3f5a3a;
+  --notice: #7a5a12;
+  --notice-soft: #f6ecd3;
+  --focus: #1f4f8a;
+
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-body: "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --step--1: clamp(0.8rem, 0.78rem + 0.1vw, 0.86rem);
+  --step-0: clamp(0.95rem, 0.92rem + 0.15vw, 1.03rem);
+  --step-1: clamp(1.1rem, 1.05rem + 0.3vw, 1.3rem);
+  --step-2: clamp(1.35rem, 1.2rem + 0.7vw, 1.8rem);
+  --step-3: clamp(1.8rem, 1.45rem + 1.6vw, 2.8rem);
+  --step-4: clamp(2.4rem, 1.7rem + 3.4vw, 4.6rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-9: 7rem;
+
+  --radius: 3px;
+  --shell: 1200px;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

@@ -1,0 +1,9 @@
+{
+  "name": "fitme-frontend",
+  "private": true,
+  "type": "module",
+  "description": "FitMe.ai vanilla-JS frontend (no build step). Served by Django.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

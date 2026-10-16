@@ -1,0 +1,439 @@
+import { ApiError, request, upload } from "../api.js";
+import { h, spinner } from "../dom.js";
+import { getSession } from "../session.js";
+import {
+  ACCEPTED_EXTENSIONS,
+  ACCEPTED_TYPES,
+  MAX_BYTES,
+  OCCASIONS,
+  TEXT_LIMITS,
+  checkDimensions,
+  checkFile,
+  formatBytes,
+  validateBrief,
+} from "../validation.js";
+
+const STAGES = [
+  [0, "Sending your photo to Qwen2.5-VL…"],
+  [6000, "Reading the garments and colours…"],
+  [16000, "Matching suggestions to the occasion…"],
+  [35000, "Still working — larger models can take up to a minute."],
+];
+
+function readDimensions(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: 0, height: 0 });
+    img.src = url;
+  });
+}
+
+function textField({ id, label, hint, multiline = false, value = "" }) {
+  const limit = TEXT_LIMITS[id];
+  const control = multiline
+    ? h("textarea", { id, name: id, maxlength: limit, rows: 3, "aria-describedby": `${id}-hint ${id}-count` })
+    : h("input", { id, name: id, type: "text", maxlength: limit, "aria-describedby": `${id}-hint ${id}-count` });
+  control.value = value;
+  const count = h("span", { id: `${id}-count`, class: "counter", "aria-live": "off" });
+  const error = h("p", { class: "error-text", hidden: true });
+  const update = () => (count.textContent = `${control.value.length}/${limit}`);
+  control.addEventListener("input", update);
+  update();
+  const wrap = h(
+    "div",
+    { class: "field" },
+    h("label", { for: id }, label),
+    control,
+    h("div", { style: { display: "flex", justifyContent: "space-between", gap: "1rem" } }, h("p", { id: `${id}-hint`, class: "hint" }, hint), count),
+    error,
+  );
+  return {
+    wrap,
+    control,
+    setError(text) {
+      error.hidden = !text;
+      error.textContent = text || "";
+      control.setAttribute("aria-invalid", text ? "true" : "false");
+    },
+  };
+}
+
+export async function renderAnalyze(ctx) {
+  const profile = getSession().profile;
+  const state = { file: null, fileError: null, previewUrl: null, busy: false, controller: null, sampleKey: null };
+
+  const [health, samples] = await Promise.all([
+    request("/api/health/", { auth: false }).catch(() => null),
+    fetch("/static/assets/samples/samples.json")
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []),
+  ]);
+  const provider = health?.ai_provider;
+  const providerReady = Boolean(provider?.configured);
+
+  // ---------- Image column ----------
+  const fileInput = h("input", {
+    type: "file",
+    id: "photo",
+    accept: [...ACCEPTED_TYPES, ...ACCEPTED_EXTENSIONS].join(","),
+    class: "visually-hidden",
+    "aria-describedby": "photo-rules photo-error",
+  });
+  const cameraInput = h("input", { type: "file", accept: "image/*", capture: "environment", class: "visually-hidden", tabindex: "-1", "aria-hidden": "true" });
+  const imageError = h("p", { id: "photo-error", class: "error-text", role: "alert" });
+  const hasCamera = window.matchMedia("(pointer: coarse)").matches;
+
+  const chooseBtn = h("button", { type: "button", class: "btn", onclick: () => fileInput.click() }, "Choose photo");
+  const cameraBtn = hasCamera ? h("button", { type: "button", class: "btn btn-ghost", onclick: () => cameraInput.click() }, "Take photo") : null;
+
+  const dropzone = h(
+    "div",
+    { class: "dropzone" },
+    h(
+      "div",
+      {},
+      h("h2", {}, "Add an outfit photo"),
+      h("p", { class: "muted" }, hasCamera ? "Choose from your library or use the camera." : "Drag a photo here, or choose one from your computer."),
+      h("div", { class: "picker" }, h("label", { for: "photo", class: "visually-hidden" }, "Outfit photo"), chooseBtn, cameraBtn),
+      h("p", { id: "photo-rules", class: "small muted", style: { marginTop: "var(--space-4)" } }, `JPEG, PNG or WebP · up to ${formatBytes(MAX_BYTES)} · at least 200px per side`),
+    ),
+  );
+
+  const previewImg = h("img", { alt: "Preview of the selected outfit photo" });
+  const fileMeta = h("span", { class: "file-meta" });
+  const preview = h(
+    "figure",
+    { class: "preview", hidden: true, style: { margin: 0 } },
+    previewImg,
+    h(
+      "figcaption",
+      { class: "preview-bar" },
+      fileMeta,
+      h(
+        "span",
+        { class: "controls" },
+        h("button", { type: "button", class: "btn-link", onclick: () => fileInput.click() }, "Replace"),
+        h("button", { type: "button", class: "btn-link", onclick: () => setFile(null) }, "Remove"),
+      ),
+    ),
+  );
+
+  const sampleButtons = [];
+  const samplesBlock = samples.length
+    ? h(
+        "div",
+        { class: "samples" },
+        h("p", { class: "small muted" }, "No photo handy? Try an outfit from the FitMe dataset:"),
+        h(
+          "ul",
+          {},
+          samples.map((sample) => {
+            const btn = h(
+              "button",
+              { type: "button", "aria-pressed": "false", title: sample.label, onclick: () => useSample(sample, btn) },
+              h("img", { src: sample.src, alt: sample.alt, loading: "lazy", width: 96, height: 96 }),
+            );
+            sampleButtons.push(btn);
+            return h("li", {}, btn);
+          }),
+        ),
+      )
+    : null;
+
+  function revokePreview() {
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+    state.previewUrl = null;
+  }
+
+  async function setFile(file, { sampleKey = null } = {}) {
+    revokePreview();
+    state.file = file;
+    state.fileError = null;
+    state.sampleKey = sampleKey;
+    sampleButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.key === sampleKey)));
+    imageError.textContent = "";
+    dropzone.classList.remove("invalid");
+
+    if (!file) {
+      preview.hidden = true;
+      dropzone.hidden = false;
+      previewImg.removeAttribute("src");
+      fileInput.value = "";
+      updateSubmit();
+      return;
+    }
+
+    const typeError = checkFile(file);
+    if (typeError) {
+      state.fileError = typeError;
+      state.file = null;
+      showImageError(typeError);
+      return;
+    }
+    state.previewUrl = URL.createObjectURL(file);
+    const { width, height } = await readDimensions(state.previewUrl);
+    const dimError = checkDimensions(width, height);
+    if (dimError) {
+      revokePreview();
+      state.file = null;
+      state.fileError = dimError;
+      showImageError(dimError);
+      return;
+    }
+    previewImg.src = state.previewUrl;
+    fileMeta.textContent = `${sampleKey ? `Dataset sample ${sampleKey}` : file.name} · ${width}×${height} · ${formatBytes(file.size)}`;
+    preview.hidden = false;
+    dropzone.hidden = true;
+    updateSubmit();
+  }
+
+  function showImageError(message) {
+    imageError.textContent = message;
+    preview.hidden = true;
+    dropzone.hidden = false;
+    dropzone.classList.add("invalid");
+    fileInput.value = "";
+    updateSubmit();
+  }
+
+  async function useSample(sample, btn) {
+    if (state.busy) return;
+    btn.dataset.key = sample.key;
+    try {
+      const response = await fetch(sample.src);
+      if (!response.ok) throw new Error();
+      const blob = await response.blob();
+      await setFile(new File([blob], `dataset-${sample.key}.jpg`, { type: "image/jpeg" }), { sampleKey: sample.key });
+    } catch {
+      showImageError("That sample couldn't be loaded. Try another one or upload your own photo.");
+    }
+  }
+  sampleButtons.forEach((b, i) => (b.dataset.key = samples[i].key));
+
+  fileInput.addEventListener("change", () => setFile(fileInput.files[0] || null));
+  cameraInput.addEventListener("change", () => setFile(cameraInput.files[0] || null));
+  for (const type of ["dragenter", "dragover"]) {
+    dropzone.addEventListener(type, (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragging");
+    });
+  }
+  for (const type of ["dragleave", "drop"]) {
+    dropzone.addEventListener(type, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragging");
+    });
+  }
+  dropzone.addEventListener("drop", (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (file) setFile(file);
+  });
+
+  // ---------- Brief column ----------
+  const occasionError = h("p", { class: "error-text", role: "alert" });
+  const occasionInputs = OCCASIONS.map((o) =>
+    h("label", { class: "chip" }, h("input", { type: "radio", name: "occasion", value: o.value, required: true }), h("span", {}, o.label)),
+  );
+  const occasionDetail = textField({ id: "occasion_detail", label: "Describe the occasion", hint: "e.g. gallery opening, job interview" });
+  occasionDetail.wrap.hidden = true;
+
+  const preferred = textField({ id: "preferred_style", label: "Preferred style", hint: "e.g. minimal, streetwear, classic" });
+  const impression = textField({ id: "desired_impression", label: "Impression you want to make", hint: "e.g. approachable, confident, polished" });
+  const context = textField({
+    id: "additional_context",
+    label: "Anything else?",
+    hint: profile?.style_notes ? "Pre-filled from your profile style notes." : "Weather, dress code, pieces you'd like to keep.",
+    multiline: true,
+    value: (profile?.style_notes || "").slice(0, TEXT_LIMITS.additional_context),
+  });
+  const textFields = { occasion_detail: occasionDetail, preferred_style: preferred, desired_impression: impression, additional_context: context };
+
+  const formAlert = h("div", { class: "alert", role: "alert", hidden: true });
+  const submitBtn = h("button", { type: "submit", class: "btn btn-accent" }, "Analyze outfit");
+  const progressFill = h("div", { class: "progress-fill" });
+  const progressLabel = h("p", { class: "small muted", "aria-live": "polite" });
+  const progress = h("div", { class: "progress", hidden: true }, h("div", { class: "progress-track" }, progressFill), progressLabel);
+  const submitHint = h("p", { class: "small muted" });
+
+  const form = h(
+    "form",
+    { class: "brief", novalidate: true },
+    h("div", {}, h("h2", {}, "The brief")),
+    h(
+      "fieldset",
+      { class: "field" },
+      h("legend", {}, "Occasion ", h("span", { class: "muted" }, "(required)")),
+      h("div", { class: "occasions" }, occasionInputs),
+      occasionError,
+    ),
+    occasionDetail.wrap,
+    h(
+      "div",
+      { class: "optional" },
+      h("div", { class: "optional-head" }, h("p", { class: "eyebrow" }, "Preferences"), h("span", { class: "small muted" }, "Optional")),
+      preferred.wrap,
+      impression.wrap,
+      context.wrap,
+    ),
+    h("div", { class: "submit-row" }, formAlert, submitBtn, progress, submitHint),
+  );
+
+  form.addEventListener("change", (e) => {
+    if (e.target.name === "occasion") {
+      occasionError.textContent = "";
+      occasionDetail.wrap.hidden = e.target.value !== "other";
+      updateSubmit();
+    }
+  });
+
+  function selectedOccasion() {
+    return form.querySelector("input[name=occasion]:checked")?.value || "";
+  }
+
+  function updateSubmit() {
+    const missing = [];
+    if (!state.file) missing.push("a photo");
+    if (!selectedOccasion()) missing.push("an occasion");
+    const blocked = !providerReady || state.busy;
+    submitBtn.setAttribute("aria-disabled", String(blocked));
+    submitBtn.disabled = state.busy || !providerReady;
+    submitHint.textContent = state.busy ? "" : !providerReady ? "" : missing.length ? `Add ${missing.join(" and ")} to continue.` : "";
+  }
+
+  function stageTimer() {
+    const started = Date.now();
+    const id = setInterval(() => {
+      const elapsed = Date.now() - started;
+      const stage = [...STAGES].reverse().find(([at]) => elapsed >= at);
+      progressLabel.textContent = stage[1];
+    }, 1000);
+    return () => clearInterval(id);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (state.busy || !providerReady) return;
+    formAlert.hidden = true;
+    Object.values(textFields).forEach((f) => f.setError(""));
+    const fields = Object.fromEntries(Object.entries(textFields).map(([k, f]) => [k, f.control.value]));
+    const { valid, errors } = validateBrief({ file: state.file, fileError: state.fileError, occasion: selectedOccasion(), fields });
+    if (!valid) {
+      if (errors.image) showImageError(errors.image);
+      if (errors.occasion) occasionError.textContent = errors.occasion;
+      for (const [key, f] of Object.entries(textFields)) if (errors[key]) f.setError(errors[key]);
+      (errors.image ? (state.file ? fileInput : chooseBtn) : errors.occasion ? occasionInputs[0].querySelector("input") : form.querySelector("[aria-invalid=true]"))?.focus();
+      return;
+    }
+
+    const data = new FormData();
+    data.append("image", state.file, state.file.name);
+    data.append("occasion", selectedOccasion());
+    for (const [key, value] of Object.entries(fields)) {
+      if (key === "occasion_detail" && selectedOccasion() !== "other") continue;
+      if (value.trim()) data.append(key, value.trim());
+    }
+
+    state.busy = true;
+    state.controller = new AbortController();
+    form.querySelectorAll("input, textarea").forEach((el) => (el.disabled = true));
+    submitBtn.replaceChildren(spinner(), " Analyzing…");
+    updateSubmit();
+    progress.hidden = false;
+    progressFill.classList.remove("indeterminate");
+    progressFill.style.width = "0";
+    progressLabel.textContent = "Uploading photo…";
+    let stopStages = () => {};
+
+    try {
+      const result = await upload("/api/analyses/", data, {
+        signal: state.controller.signal,
+        onProgress: (fraction) => {
+          progressFill.style.width = `${Math.round(fraction * 100)}%`;
+          progressLabel.textContent = `Uploading photo… ${Math.round(fraction * 100)}%`;
+        },
+        onUploaded: () => {
+          progressFill.style.width = "";
+          progressFill.classList.add("indeterminate");
+          stopStages = stageTimer();
+          progressLabel.textContent = STAGES[0][1];
+        },
+      });
+      ctx.navigate(`/analyses/${result.id}`, { state: { analysis: result } });
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      if (error instanceof ApiError && error.data?.analysis) {
+        // The analysis was stored but the model failed: the result page offers a retry.
+        ctx.navigate(`/analyses/${error.data.analysis.id}`, { state: { analysis: error.data.analysis } });
+        return;
+      }
+      const fieldErrors = error.fields || {};
+      if (fieldErrors.image) showImageError([].concat(fieldErrors.image).join(" "));
+      if (fieldErrors.occasion) occasionError.textContent = [].concat(fieldErrors.occasion).join(" ");
+      for (const [key, f] of Object.entries(textFields)) if (fieldErrors[key]) f.setError([].concat(fieldErrors[key]).join(" "));
+      if (!Object.keys(fieldErrors).length) {
+        formAlert.replaceChildren(h("strong", {}, "The analysis didn't start."), error.message);
+        formAlert.hidden = false;
+      }
+    } finally {
+      stopStages();
+      if (ctx.isCurrent()) {
+        state.busy = false;
+        form.querySelectorAll("input, textarea").forEach((el) => (el.disabled = false));
+        submitBtn.textContent = "Analyze outfit";
+        progress.hidden = true;
+        updateSubmit();
+      }
+    }
+  });
+
+  ctx.onCleanup(() => {
+    state.controller?.abort();
+    revokePreview();
+  });
+  updateSubmit();
+
+  // ---------- Provider banner ----------
+  let banner = null;
+  if (!health) {
+    banner = h("div", { class: "alert", role: "alert" }, h("strong", {}, "Can't reach the FitMe.ai server."), "Check your connection, then reload the page.");
+  } else if (!providerReady) {
+    banner = h(
+      "div",
+      { class: "alert alert-notice", role: "status" },
+      h("strong", {}, "Analysis is unavailable right now."),
+      "No AI provider is configured on this server, so outfits can't be analyzed. Your history is still available.",
+    );
+  } else if (provider.is_mock) {
+    banner = h(
+      "div",
+      { class: "alert alert-notice", role: "status" },
+      h("strong", {}, "Development mock mode."),
+      "Results on this server are placeholder fixtures, not Qwen2.5-VL output. Only the dominant colours are measured from your photo.",
+    );
+  }
+
+  return h(
+    "div",
+    { class: "page shell" },
+    h(
+      "div",
+      { class: "page-head" },
+      h(
+        "div",
+        {},
+        h("p", { class: "eyebrow" }, "Workspace"),
+        h("h1", {}, "Analyze an outfit"),
+        h("p", {}, providerReady && !provider.is_mock ? `Analysis by ${provider.model} (Qwen2.5-VL).` : "Upload a photo and describe the occasion."),
+      ),
+      h("a", { href: "/history", class: "small" }, "View history"),
+    ),
+    banner ? h("div", { style: { marginBottom: "var(--space-6)" } }, banner) : null,
+    h(
+      "div",
+      { class: "workspace" },
+      h("section", { "aria-label": "Outfit photo" }, dropzone, preview, imageError, fileInput, cameraInput, samplesBlock),
+      h("section", { "aria-label": "Occasion and preferences" }, form),
+    ),
+  );
+}

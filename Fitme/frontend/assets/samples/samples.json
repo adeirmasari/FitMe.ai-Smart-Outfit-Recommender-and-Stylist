@@ -1,0 +1,50 @@
+[
+ {
+  "key": "0000080",
+  "src": "/static/assets/samples/0000080.jpg",
+  "label": "Pants \u00b7 Pumps \u00b7 Shirts",
+  "alt": "Flat-lay of pants, pumps, shirts"
+ },
+ {
+  "key": "0000136",
+  "src": "/static/assets/samples/0000136.jpg",
+  "label": "Espadrilles \u00b7 Cross-body bags",
+  "alt": "Flat-lay of espadrilles, cross-body bags"
+ },
+ {
+  "key": "0000168",
+  "src": "/static/assets/samples/0000168.jpg",
+  "label": "Tops \u00b7 Jeans",
+  "alt": "Flat-lay of tops, jeans"
+ },
+ {
+  "key": "0000216",
+  "src": "/static/assets/samples/0000216.jpg",
+  "label": "Dresses",
+  "alt": "Flat-lay of dresses"
+ },
+ {
+  "key": "0000232",
+  "src": "/static/assets/samples/0000232.jpg",
+  "label": "Pumps \u00b7 Activewear \u00b7 Coats",
+  "alt": "Flat-lay of pumps, activewear, coats"
+ },
+ {
+  "key": "0000320",
+  "src": "/static/assets/samples/0000320.jpg",
+  "label": "Sweaters & knitwear \u00b7 Skirts \u00b7 Boots",
+  "alt": "Flat-lay of sweaters & knitwear, skirts, boots"
+ },
+ {
+  "key": "0000424",
+  "src": "/static/assets/samples/0000424.jpg",
+  "label": "Pants \u00b7 Ballet flats",
+  "alt": "Flat-lay of pants, ballet flats"
+ },
+ {
+  "key": "0000500",
+  "src": "/static/assets/samples/0000500.jpg",
+  "label": "Jeans \u00b7 Pumps",
+  "alt": "Flat-lay of jeans, pumps"
+ }
+]
