@@ -15,6 +15,7 @@ import base64
 import logging
 import time
 
+from django.http import response
 import requests
 from django.conf import settings
 
@@ -91,8 +92,15 @@ class QwenVLProvider(VisionProvider):
                 last_error = ProviderUnavailable(f"connection error: {type(exc).__name__}")
             else:
                 if response.status_code < 400:
-                    return response
-                logger.warning("Qwen provider HTTP %s (attempt %s/%s)", response.status_code, attempt + 1, attempts)
+                    return response         
+                logger.warning(
+                    "Qwen provider HTTP %s (attempt %s/%s): %s",
+                    response.status_code,
+                    attempt + 1,
+                    attempts,
+                    response.text[:1000],
+                )
+
                 if response.status_code in _TRANSIENT_STATUS:
                     last_error = ProviderUnavailable(f"HTTP {response.status_code}")
                 elif response.status_code in (401, 403, 404):
