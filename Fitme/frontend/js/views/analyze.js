@@ -1,4 +1,4 @@
-import { ApiError, request, upload } from "../api.js";
+import { ApiError, request, upload, fetchImageUrl } from "../api.js";
 import { h, spinner } from "../dom.js";
 import { getSession } from "../session.js";
 import {
@@ -59,9 +59,22 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
   };
 }
 
-export async function renderAnalyze(ctx) {
-  const profile = getSession().profile;
-  const state = { file: null, fileError: null, previewUrl: null, busy: false, controller: null, sampleKey: null };
+    export async function renderAnalyze(ctx) {
+      const profile = getSession().profile;
+      const state = {
+      file: null,
+      fileError: null,
+      previewUrl: null,
+      busy: false,
+      controller: null,
+      sampleKey: null,
+      source: "upload",
+      wardrobeItems: [],
+      wardrobeImageUrls: [],
+      wardrobeLoading: false,
+      wardrobeLoaded: false,
+      wardrobeError: null,
+    };
 
   const [health, samples] = await Promise.all([
     request("/api/health/", { auth: false }).catch(() => null),
@@ -73,6 +86,191 @@ export async function renderAnalyze(ctx) {
   const providerReady = Boolean(provider?.configured);
 
   // ---------- Image column ----------
+
+    // ---------- Clothing source selector ----------
+  const sourceUploadBtn = h(
+    "button",
+    {
+      type: "button",
+      class: "btn btn-accent",
+      "aria-pressed": "true",
+      onclick: () => switchSource("upload"),
+    },
+    "Upload Foto Baru",
+  );
+
+  const sourceWardrobeBtn = h(
+    "button",
+    {
+      type: "button",
+      class: "btn",
+      "aria-pressed": "false",
+      onclick: () => switchSource("wardrobe"),
+    },
+    "Digital Wardrobe",
+  );
+
+  const sourceSelector = h(
+    "div",
+    {
+      class: "source-selector",
+      style: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "0.75rem",
+        marginBottom: "1rem",
+      },
+    },
+    sourceUploadBtn,
+    sourceWardrobeBtn,
+  );
+
+    const wardrobePanel = h("div", {
+    class: "wardrobe-panel",
+    hidden: true,
+  });
+
+  const wardrobeStatus = h(
+    "p",
+    { class: "small muted", role: "status" },
+    "Koleksi pakaian akan ditampilkan di sini.",
+  );
+
+  const wardrobeGrid = h("div", {
+    class: "wardrobe-grid",
+  });
+
+  wardrobePanel.append(wardrobeStatus, wardrobeGrid);
+
+    async function loadWardrobe() {
+    if (state.wardrobeLoading || state.wardrobeLoaded) return;
+
+    state.wardrobeLoading = true;
+    state.wardrobeError = null;
+    wardrobeStatus.textContent = "Memuat koleksi pakaian...";
+    wardrobeGrid.replaceChildren();
+
+    try {
+      const response = await request("/api/wardrobe/");
+      const items = Array.isArray(response)
+        ? response
+        : response.results || [];
+
+      state.wardrobeItems = items;
+      state.wardrobeLoaded = true;
+
+      if (items.length === 0) {
+        wardrobeStatus.textContent =
+          "Koleksi masih kosong. Tambahkan pakaian terlebih dahulu di Digital Wardrobe.";
+        return;
+      }
+
+      wardrobeStatus.textContent =
+        `${items.length} item pakaian tersimpan.`;
+
+      const cards = await Promise.all(
+        items.map(async (item) => {
+          let imageUrl = null;
+
+          if (item.thumbnail_url || item.image_url) {
+            try {
+              imageUrl = await fetchImageUrl(
+                item.thumbnail_url || item.image_url,
+              );
+            } catch {
+              imageUrl = null;
+            }
+          }
+
+          if (imageUrl) {
+            state.wardrobeImageUrls.push(imageUrl);
+          }
+
+          return h(
+            "article",
+            {
+              class: "wardrobe-item-card",
+              style: {
+                border: "1px solid var(--border)",
+                borderRadius: "12px",
+                padding: "0.75rem",
+                minWidth: "0",
+              },
+            },
+            imageUrl
+              ? h("img", {
+                  src: imageUrl,
+                  alt: item.name,
+                  loading: "lazy",
+                  style: {
+                    width: "100%",
+                    height: "150px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  },
+                })
+              : h(
+                  "div",
+                  {
+                    style: {
+                      height: "150px",
+                      display: "grid",
+                      placeItems: "center",
+                    },
+                  },
+                  "Foto tidak tersedia",
+                ),
+            h("h3", {}, item.name),
+            h("p", { class: "small muted" }, item.category_label || item.category),
+            item.color
+              ? h("p", { class: "small muted" }, `Warna: ${item.color}`)
+              : null,
+          );
+        }),
+      );
+
+      wardrobeGrid.style.display = "grid";
+      wardrobeGrid.style.gridTemplateColumns =
+        "repeat(auto-fill, minmax(140px, 1fr))";
+      wardrobeGrid.style.gap = "1rem";
+      wardrobeGrid.replaceChildren(...cards);
+    } catch (error) {
+      state.wardrobeError = error.message || "Gagal memuat koleksi pakaian.";
+      wardrobeStatus.textContent = state.wardrobeError;
+    } finally {
+      state.wardrobeLoading = false;
+    }
+  }
+
+  function switchSource(source) {
+    if (state.busy) return;
+
+    state.source = source;
+
+    const useUpload = source === "upload";
+
+    sourceUploadBtn.classList.toggle("btn-accent", useUpload);
+    sourceWardrobeBtn.classList.toggle("btn-accent", !useUpload);
+
+    sourceUploadBtn.setAttribute("aria-pressed", String(useUpload));
+    sourceWardrobeBtn.setAttribute("aria-pressed", String(!useUpload));
+
+    wardrobePanel.hidden = useUpload;
+    dropzone.hidden = !useUpload || Boolean(state.file);
+    preview.hidden = !useUpload || !state.file;
+    imageError.hidden = !useUpload || !state.fileError;
+
+    if (samplesBlock) {
+      samplesBlock.hidden = !useUpload;
+    }
+
+    if (!useUpload) {
+      loadWardrobe();
+    }
+
+    updateSubmit();
+  }
+
   const fileInput = h("input", {
     type: "file",
     id: "photo",
@@ -291,14 +489,33 @@ export async function renderAnalyze(ctx) {
     return form.querySelector("input[name=occasion]:checked")?.value || "";
   }
 
+  
   function updateSubmit() {
     const missing = [];
+
+    if (state.source === "wardrobe") {
+      submitBtn.disabled = true;
+      submitBtn.setAttribute("aria-disabled", "true");
+      submitHint.textContent =
+        "Analisis langsung dari Digital Wardrobe belum tersedia. Gunakan Upload Foto Baru untuk menjalankan analisis.";
+      return;
+    }
+
     if (!state.file) missing.push("a photo");
     if (!selectedOccasion()) missing.push("an occasion");
+
     const blocked = !providerReady || state.busy;
+
     submitBtn.setAttribute("aria-disabled", String(blocked));
-    submitBtn.disabled = state.busy || !providerReady;
-    submitHint.textContent = state.busy ? "" : !providerReady ? "" : missing.length ? `Add ${missing.join(" and ")} to continue.` : "";
+    submitBtn.disabled = blocked;
+
+    submitHint.textContent = state.busy
+      ? ""
+      : !providerReady
+        ? ""
+        : missing.length
+          ? `Add ${missing.join(" and ")} to continue.`
+          : "";
   }
 
   function stageTimer() {
@@ -387,11 +604,18 @@ export async function renderAnalyze(ctx) {
     }
   });
 
+  
   ctx.onCleanup(() => {
     state.controller?.abort();
     revokePreview();
+
+    state.wardrobeImageUrls.forEach((url) => {
+      URL.revokeObjectURL(url);
+    });
+
+    state.wardrobeImageUrls = [];
   });
-  updateSubmit();
+
 
   // ---------- Provider banner ----------
   let banner = null;
@@ -432,8 +656,20 @@ export async function renderAnalyze(ctx) {
     h(
       "div",
       { class: "workspace" },
-      h("section", { "aria-label": "Outfit photo" }, dropzone, preview, imageError, fileInput, cameraInput, samplesBlock),
+      h(
+  "section",
+  { "aria-label": "Outfit photo" },
+  sourceSelector,
+  wardrobePanel,
+  dropzone,
+  preview,
+  imageError,
+  fileInput,
+  cameraInput,
+  samplesBlock,
+),
       h("section", { "aria-label": "Occasion and preferences" }, form),
     ),
   );
 }
+
