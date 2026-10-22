@@ -107,3 +107,66 @@ class OutfitRecommendation(models.Model):
 
     def __str__(self):
         return f"OutfitRecommendation<{self.analysis_id}> via {self.provider}"
+
+
+class WardrobeCategory(models.TextChoices):
+    TOP = "top", "Atasan"
+    BOTTOM = "bottom", "Bawahan"
+    OUTERWEAR = "outerwear", "Outerwear"
+    FOOTWEAR = "footwear", "Alas Kaki"
+    ACCESSORY = "accessory", "Aksesori"
+    OTHER = "other", "Lainnya"
+
+
+def _wardrobe_image_path(instance, filename):
+    return f"wardrobe/{instance.owner_id}/{instance.id}.jpg"
+
+
+def _wardrobe_thumb_path(instance, filename):
+    return f"wardrobe/{instance.owner_id}/{instance.id}_thumb.jpg"
+
+
+class WardrobeItem(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wardrobe_items",
+    )
+    name = models.CharField(max_length=80)
+    category = models.CharField(
+        max_length=16,
+        choices=WardrobeCategory.choices,
+        default=WardrobeCategory.OTHER,
+    )
+    image = models.ImageField(upload_to=_wardrobe_image_path)
+    thumbnail = models.ImageField(
+        upload_to=_wardrobe_thumb_path,
+        blank=True,
+    )
+    image_width = models.PositiveIntegerField(default=0)
+    image_height = models.PositiveIntegerField(default=0)
+    color = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(
+                fields=["owner", "-created_at"],
+                name="wardrobe_owner_recent",
+            ),
+            models.Index(
+                fields=["owner", "category"],
+                name="wardrobe_owner_category",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+

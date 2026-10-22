@@ -1,8 +1,15 @@
+
 from rest_framework.routers import SimpleRouter
 
-from .views import AnalysisViewSet
+from .views import AnalysisViewSet, WardrobeViewSet
 
-router = SimpleRouter()
-router.register("", AnalysisViewSet, basename="analysis")
+analysis_router = SimpleRouter()
+analysis_router.register("", AnalysisViewSet, basename="analysis")
 
-urlpatterns = router.urls
+wardrobe_router = SimpleRouter()
+wardrobe_router.register("", WardrobeViewSet, basename="wardrobe")
+
+urlpatterns = [
+    *analysis_router.urls,
+    *wardrobe_router.urls,
+]

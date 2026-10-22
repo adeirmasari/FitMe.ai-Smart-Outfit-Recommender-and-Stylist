@@ -3,7 +3,13 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .imaging import ImageRejected, validate_and_process
-from .models import Occasion, OutfitAnalysis, OutfitRecommendation
+from .models import (
+    Occasion,
+    OutfitAnalysis,
+    OutfitRecommendation,
+    WardrobeCategory,
+    WardrobeItem,
+)
 from .services import error_info
 
 
@@ -177,3 +183,62 @@ class AnalysisDetailSerializer(_AnalysisBase):
             return None
         rec = getattr(obj, "recommendation", None)
         return RecommendationSerializer(rec).data if rec else None
+
+
+class WardrobeItemCreateSerializer(serializers.ModelSerializer):
+    image = serializers.FileField(
+        help_text="JPEG, PNG or WebP, up to 8 MB, at least 200px per side."
+    )
+
+    class Meta:
+        model = WardrobeItem
+        fields = ["id", "name", "category", "color", "image"]
+        read_only_fields = ["id"]
+
+    def validate_image(self, upload):
+        try:
+            self.context["processed_image"] = validate_and_process(upload)
+        except ImageRejected as exc:
+            raise serializers.ValidationError(str(exc), code=exc.code)
+        return upload
+
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Nama pakaian wajib diisi.")
+        return value
+
+    def validate_color(self, value):
+        return value.strip()
+
+
+class WardrobeItemSerializer(serializers.ModelSerializer):
+    thumbnail_url = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+    category_label = serializers.CharField(
+        source="get_category_display",
+        read_only=True,
+    )
+
+    class Meta:
+        model = WardrobeItem
+        fields = [
+            "id",
+            "name",
+            "category",
+            "category_label",
+            "color",
+            "image_width",
+            "image_height",
+            "thumbnail_url",
+            "image_url",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_thumbnail_url(self, obj):
+        return reverse("wardrobe-image", args=[obj.pk]) + "?variant=thumb"
+
+    def get_image_url(self, obj):
+        return reverse("wardrobe-image", args=[obj.pk])
