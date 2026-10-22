@@ -69,6 +69,7 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
       controller: null,
       sampleKey: null,
       source: "upload",
+      selectedWardrobeItemId: null,
       wardrobeItems: [],
       wardrobeImageUrls: [],
       wardrobeLoading: false,
@@ -190,6 +191,10 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
             "article",
             {
               class: "wardrobe-item-card",
+              role: "button",
+              tabindex: "0",
+              "aria-pressed": String(state.selectedWardrobeItemId === item.id),
+              onclick: () => selectWardrobeItem(item.id),
               style: {
                 border: "1px solid var(--border)",
                 borderRadius: "12px",
@@ -241,6 +246,27 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
       state.wardrobeLoading = false;
     }
   }
+
+  
+  function selectWardrobeItem(itemId) {
+    if (state.busy) return;
+
+    state.selectedWardrobeItemId = itemId;
+
+    const cards = wardrobeGrid.querySelectorAll(".wardrobe-item-card");
+    cards.forEach((card, index) => {
+      const item = state.wardrobeItems[index];
+      const selected = item?.id === itemId;
+
+      card.setAttribute("aria-pressed", String(selected));
+      card.style.borderColor = selected
+        ? "var(--accent)"
+        : "var(--border)";
+    });
+
+    updateSubmit();
+  }
+
 
   function switchSource(source) {
     if (state.busy) return;
@@ -490,43 +516,44 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
   }
 
   
+  
   function updateSubmit() {
-    const missing = [];
+      const missing = [];
 
-    if (state.source === "wardrobe") {
-      submitBtn.disabled = true;
-      submitBtn.setAttribute("aria-disabled", "true");
-      submitHint.textContent =
-        "Analisis langsung dari Digital Wardrobe belum tersedia. Gunakan Upload Foto Baru untuk menjalankan analisis.";
-      return;
+      if (state.source === "wardrobe") {
+        if (!state.selectedWardrobeItemId) {
+          missing.push("a wardrobe item");
+        }
+      } else if (!state.file) {
+        missing.push("a photo");
+      }
+
+      if (!selectedOccasion()) missing.push("an occasion");
+
+      const blocked = !providerReady || state.busy || missing.length > 0;
+
+      submitBtn.setAttribute("aria-disabled", String(blocked));
+      submitBtn.disabled = blocked;
+
+      submitHint.textContent = state.busy
+        ? ""
+        : !providerReady
+          ? ""
+          : missing.length
+            ? `Add ${missing.join(" and ")} to continue.`
+            : "";
     }
 
-    if (!state.file) missing.push("a photo");
-    if (!selectedOccasion()) missing.push("an occasion");
 
-    const blocked = !providerReady || state.busy;
-
-    submitBtn.setAttribute("aria-disabled", String(blocked));
-    submitBtn.disabled = blocked;
-
-    submitHint.textContent = state.busy
-      ? ""
-      : !providerReady
-        ? ""
-        : missing.length
-          ? `Add ${missing.join(" and ")} to continue.`
-          : "";
-  }
-
-  function stageTimer() {
-    const started = Date.now();
-    const id = setInterval(() => {
-      const elapsed = Date.now() - started;
-      const stage = [...STAGES].reverse().find(([at]) => elapsed >= at);
-      progressLabel.textContent = stage[1];
-    }, 1000);
-    return () => clearInterval(id);
-  }
+    function stageTimer() {
+      const started = Date.now();
+      const id = setInterval(() => {
+        const elapsed = Date.now() - started;
+        const stage = [...STAGES].reverse().find(([at]) => elapsed >= at);
+        progressLabel.textContent = stage[1];
+      }, 1000);
+      return () => clearInterval(id);
+    }
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -534,7 +561,13 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
     formAlert.hidden = true;
     Object.values(textFields).forEach((f) => f.setError(""));
     const fields = Object.fromEntries(Object.entries(textFields).map(([k, f]) => [k, f.control.value]));
-    const { valid, errors } = validateBrief({ file: state.file, fileError: state.fileError, occasion: selectedOccasion(), fields });
+    const { valid, errors } = validateBrief({
+    file: state.file,
+    fileError: state.fileError,
+    occasion: selectedOccasion(),
+    fields,
+    source: state.source,
+  });
     if (!valid) {
       if (errors.image) showImageError(errors.image);
       if (errors.occasion) occasionError.textContent = errors.occasion;
@@ -543,9 +576,17 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
       return;
     }
 
+    
     const data = new FormData();
-    data.append("image", state.file, state.file.name);
-    data.append("occasion", selectedOccasion());
+
+    if (state.source === "wardrobe") {
+      data.append("wardrobe_item_id", state.selectedWardrobeItemId);
+    } else {
+      data.append("image", state.file, state.file.name);
+    }
+
+data.append("occasion", selectedOccasion());
+
     for (const [key, value] of Object.entries(fields)) {
       if (key === "occasion_detail" && selectedOccasion() !== "other") continue;
       if (value.trim()) data.append(key, value.trim());
@@ -559,7 +600,10 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
     progress.hidden = false;
     progressFill.classList.remove("indeterminate");
     progressFill.style.width = "0";
-    progressLabel.textContent = "Uploading photo…";
+    progressLabel.textContent =
+    state.source === "wardrobe"
+      ? "Preparing wardrobe item…"
+      : "Uploading photo…";
     let stopStages = () => {};
 
     try {
@@ -567,14 +611,21 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
         signal: state.controller.signal,
         onProgress: (fraction) => {
           progressFill.style.width = `${Math.round(fraction * 100)}%`;
-          progressLabel.textContent = `Uploading photo… ${Math.round(fraction * 100)}%`;
+          progressLabel.textContent =
+            state.source === "wardrobe"
+              ? "Submitting wardrobe item…"
+              : `Uploading photo… ${Math.round(fraction * 100)}%`;
         },
         onUploaded: () => {
-          progressFill.style.width = "";
-          progressFill.classList.add("indeterminate");
-          stopStages = stageTimer();
-          progressLabel.textContent = STAGES[0][1];
-        },
+        progressFill.style.width = "";
+        progressFill.classList.add("indeterminate");
+        stopStages = stageTimer();
+
+        progressLabel.textContent =
+          state.source === "wardrobe"
+            ? "Sending wardrobe item for analysis…"
+            : STAGES[0][1];
+      },
       });
       ctx.navigate(`/analyses/${result.id}`, { state: { analysis: result } });
     } catch (error) {

@@ -49,16 +49,27 @@ export function checkDimensions(width, height) {
   return null;
 }
 
+
 /** Validate the whole analysis form. Returns { valid, errors } keyed by field. */
-export function validateBrief({ file, fileError, occasion, fields }) {
+export function validateBrief({ file, fileError, occasion, fields, source = "upload" }) {
   const errors = {};
-  const imageError = fileError || checkFile(file);
-  if (imageError) errors.image = imageError;
-  if (!OCCASIONS.some((o) => o.value === occasion)) errors.occasion = "Choose the occasion you're dressing for.";
+
+  if (source === "upload") {
+    const imageError = fileError || checkFile(file);
+    if (imageError) errors.image = imageError;
+  }
+
+  if (!OCCASIONS.some((o) => o.value === occasion)) {
+    errors.occasion = "Choose the occasion you're dressing for.";
+  }
+
   for (const [key, limit] of Object.entries(TEXT_LIMITS)) {
     const value = (fields?.[key] || "").trim();
-    if (value.length > limit) errors[key] = `Keep this under ${limit} characters.`;
+    if (value.length > limit) {
+      errors[key] = `Keep this under ${limit} characters.`;
+    }
   }
+
   return { valid: Object.keys(errors).length === 0, errors };
 }
 

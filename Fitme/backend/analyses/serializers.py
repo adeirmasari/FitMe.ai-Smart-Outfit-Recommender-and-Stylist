@@ -13,26 +13,34 @@ from .models import (
 from .services import error_info
 
 
+
 class AnalysisCreateSerializer(serializers.Serializer):
-    image = serializers.FileField(help_text="JPEG, PNG or WebP, up to 8 MB, at least 200px per side.")
+    image = serializers.FileField(
+        required=False,
+        help_text="JPEG, PNG or WebP, up to 8 MB, at least 200px per side.",
+    )
+    wardrobe_item_id = serializers.UUIDField(required=False)
     occasion = serializers.ChoiceField(choices=Occasion.choices)
     occasion_detail = serializers.CharField(max_length=80, required=False, allow_blank=True)
     preferred_style = serializers.CharField(max_length=120, required=False, allow_blank=True)
     desired_impression = serializers.CharField(max_length=120, required=False, allow_blank=True)
     additional_context = serializers.CharField(max_length=300, required=False, allow_blank=True)
 
-    def validate_image(self, upload):
-        try:
-            self.context["processed_image"] = validate_and_process(upload)
-        except ImageRejected as exc:
-            raise serializers.ValidationError(str(exc), code=exc.code)
-        return upload
-
     def validate(self, attrs):
-        if attrs.get("occasion") != Occasion.OTHER:
-            attrs["occasion_detail"] = ""
-        for key in ("occasion_detail", "preferred_style", "desired_impression", "additional_context"):
-            attrs[key] = (attrs.get(key) or "").strip()
+        image = attrs.get("image")
+        wardrobe_item_id = attrs.get("wardrobe_item_id")
+
+        if bool(image) == bool(wardrobe_item_id):
+            raise serializers.ValidationError(
+                "Provide either an uploaded image or a wardrobe item, but not both."
+            )
+
+        if image:
+            try:
+                self.context["processed_image"] = validate_and_process(image)
+            except ImageRejected as exc:
+                raise serializers.ValidationError({"image": str(exc)}) from exc
+
         return attrs
 
 

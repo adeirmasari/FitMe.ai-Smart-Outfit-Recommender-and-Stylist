@@ -92,6 +92,7 @@ class AnalysisViewSet(
             504: FailedAnalysisResponse,
         },
     )
+    
     def create(self, request):
         provider = get_provider()
         if not provider.is_configured():
@@ -107,14 +108,49 @@ class AnalysisViewSet(
 
         serializer = AnalysisCreateSerializer(data=request.data, context={})
         serializer.is_valid(raise_exception=True)
-        fields = {k: v for k, v in serializer.validated_data.items() if k != "image"}
-        analysis = services.create_analysis(request.user, serializer.context["processed_image"], fields)
+
+        fields = {
+            key: value
+            for key, value in serializer.validated_data.items()
+            if key not in ("image", "wardrobe_item_id")
+        }
+
+        if "wardrobe_item_id" in serializer.validated_data:
+            try:
+                item = WardrobeItem.objects.get(
+                    pk=serializer.validated_data["wardrobe_item_id"],
+                    owner=request.user,
+                )
+            except WardrobeItem.DoesNotExist:
+                return Response(
+                    {
+                        "error": {
+                            "code": "wardrobe_item_not_found",
+                            "message": "Wardrobe item was not found.",
+                        }
+                    },
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            from .imaging import validate_and_process
+
+            with item.image.open("rb") as image_file:
+                processed_image = validate_and_process(image_file)
+        else:
+            processed_image = serializer.context["processed_image"]
+
+        analysis = services.create_analysis(request.user, processed_image, fields)
         analysis = services.run_analysis(analysis, provider=provider)
         analysis = self.get_queryset().get(pk=analysis.pk)
 
         if analysis.status == AnalysisStatus.COMPLETED:
-            return Response(AnalysisDetailSerializer(analysis).data, status=status.HTTP_201_CREATED)
+            return Response(
+                AnalysisDetailSerializer(analysis).data,
+                status=status.HTTP_201_CREATED,
+            )
+
         return _failure_response(analysis)
+
 
     @extend_schema(
         tags=["analyses"],
