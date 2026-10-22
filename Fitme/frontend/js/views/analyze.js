@@ -72,6 +72,7 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
       selectedWardrobeItemId: null,
       wardrobeItems: [],
       wardrobeImageUrls: [],
+      wardrobeImageUrlById: {},
       wardrobeLoading: false,
       wardrobeLoaded: false,
       wardrobeError: null,
@@ -148,6 +149,7 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
 
     state.wardrobeLoading = true;
     state.wardrobeError = null;
+    state.wardrobeImageUrlById = {};
     wardrobeStatus.textContent = "Memuat koleksi pakaian...";
     wardrobeGrid.replaceChildren();
 
@@ -185,6 +187,7 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
 
           if (imageUrl) {
             state.wardrobeImageUrls.push(imageUrl);
+            state.wardrobeImageUrlById[item.id] = imageUrl;
           }
 
           return h(
@@ -459,6 +462,14 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
   const textFields = { occasion_detail: occasionDetail, preferred_style: preferred, desired_impression: impression, additional_context: context };
 
   const formAlert = h("div", { class: "alert", role: "alert", hidden: true });
+  const recommendationResults = h("section", {
+    class: "recommendation-results",
+    hidden: true,
+    "aria-live": "polite",
+    style: {
+      marginTop: "1.5rem",
+    },
+  });
   const submitBtn = h("button", { type: "submit", class: "btn btn-accent" }, "Analyze outfit");
   const progressFill = h("div", { class: "progress-fill" });
   const progressLabel = h("p", { class: "small muted", "aria-live": "polite" });
@@ -501,6 +512,117 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
   }
 
   
+function renderWardrobeRecommendation(result) {
+  const outfit = result?.outfit;
+
+  if (!outfit?.top_id || !outfit?.bottom_id) {
+    recommendationResults.hidden = true;
+    recommendationResults.replaceChildren();
+    return false;
+  }
+
+  const top = state.wardrobeItems.find(
+    (item) =>
+      String(item.id) === String(outfit.top_id) &&
+      item.category === "top",
+  );
+
+  const bottom = state.wardrobeItems.find(
+    (item) =>
+      String(item.id) === String(outfit.bottom_id) &&
+      item.category === "bottom",
+  );
+
+  // Pastikan kedua item benar-benar ada di koleksi pengguna.
+  if (!top || !bottom) {
+    recommendationResults.hidden = true;
+    recommendationResults.replaceChildren();
+    return false;
+  }
+
+  function createClothingCard(item, label) {
+    const imageUrl = state.wardrobeImageUrlById[item.id];
+
+    return h(
+      "article",
+      {
+        style: {
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+          padding: "1rem",
+          minWidth: "0",
+        },
+      },
+      h("p", { class: "eyebrow" }, label),
+      imageUrl
+        ? h("img", {
+            src: imageUrl,
+            alt: item.name,
+            loading: "lazy",
+            style: {
+              display: "block",
+              width: "100%",
+              height: "220px",
+              objectFit: "cover",
+              borderRadius: "8px",
+            },
+          })
+        : h(
+            "p",
+            { class: "small muted" },
+            "Foto pakaian tidak tersedia.",
+          ),
+      h("h3", {}, item.name),
+      item.color
+        ? h("p", { class: "small muted" }, `Warna: ${item.color}`)
+        : null,
+    );
+  }
+
+  recommendationResults.replaceChildren(
+    h("h2", {}, "Rekomendasi Outfit Kamu"),
+    h(
+      "p",
+      { class: "small muted" },
+      "Satu kombinasi pakaian yang dipilih berdasarkan acara dan preferensimu.",
+    ),
+    h(
+      "div",
+      {
+        style: {
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "1rem",
+        },
+      },
+      createClothingCard(top, "ATASAN"),
+      createClothingCard(bottom, "BAWAHAN"),
+    ),
+    h(
+      "div",
+      {
+        style: {
+          marginTop: "1rem",
+          padding: "1rem",
+          border: "1px solid var(--border)",
+          borderRadius: "12px",
+        },
+      },
+      h("h3", {}, "Alasan rekomendasi"),
+      h(
+        "p",
+        {},
+        typeof outfit.reason === "string" && outfit.reason.trim()
+          ? outfit.reason
+          : "Tidak ada alasan rekomendasi yang diberikan.",
+      ),
+    ),
+  );
+
+  recommendationResults.hidden = false;
+  return true;
+}
+
     function updateSubmit() {
       const missing = [];
 
@@ -638,11 +760,20 @@ const endpoint = isWardrobe
       },
     });
 
+    
     if (isWardrobe) {
-      formAlert.replaceChildren(
-        h("strong", {}, "Digital Wardrobe berhasil disiapkan."),
-        ` Sebanyak ${result.wardrobe_count} item pakaian berhasil dimuat untuk persiapan rekomendasi. Integrasi AI belum dijalankan.`
-      );
+      const hasRecommendation = renderWardrobeRecommendation(result);
+
+      if (hasRecommendation) {
+        formAlert.replaceChildren(
+          h("strong", {}, "Rekomendasi outfit berhasil dimuat."),
+        );
+      } else {
+        formAlert.replaceChildren(
+          h("strong", {}, "Digital Wardrobe berhasil disiapkan."),
+          ` Sebanyak ${result.wardrobe_count} item pakaian berhasil dimuat untuk persiapan rekomendasi. Integrasi AI belum menghasilkan rekomendasi outfit.`,
+        );
+      }
 
       formAlert.hidden = false;
     } else {
@@ -650,6 +781,7 @@ const endpoint = isWardrobe
         state: { analysis: result },
       });
     }
+
 
     } catch (error) {
       if (error.name === "AbortError") return;
@@ -742,7 +874,12 @@ const endpoint = isWardrobe
   cameraInput,
   samplesBlock,
 ),
-      h("section", { "aria-label": "Occasion and preferences" }, form),
+            h(
+        "section",
+        { "aria-label": "Occasion and preferences" },
+        form,
+        recommendationResults,
+      ),
     ),
   );
 }
