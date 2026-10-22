@@ -1,0 +1,371 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} — FitMe.ai</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #f5f0e8;
+            --surface: #fffdf9;
+            --ink: #24211f;
+            --muted: #81766c;
+            --line: #e5d9cc;
+            --accent: #873126;
+            --accent-light: #f2e3dc;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 36px;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: "DM Sans", sans-serif;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        a:hover { text-decoration: underline; }
+
+        .back {
+            display: inline-block;
+            margin-bottom: 28px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 10px 0;
+            font-family: "Playfair Display", serif;
+            font-size: clamp(30px, 4vw, 44px);
+            font-weight: 500;
+        }
+
+        .subtitle {
+            margin-bottom: 30px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .panel {
+            overflow: hidden;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            box-shadow: 0 12px 35px rgba(60, 42, 28, .05);
+            animation: appear .45s ease both;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-header h2 {
+            margin: 0;
+            font-family: "Playfair Display", serif;
+            font-size: 21px;
+            font-weight: 500;
+        }
+
+        .count {
+            padding: 8px 12px;
+            border-radius: 30px;
+            background: var(--accent-light);
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        thead { background: #f8f3ec; }
+
+        th {
+            padding: 15px 20px;
+            color: var(--muted);
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 16px 20px;
+            border-top: 1px solid #eee6dc;
+            font-size: 13px;
+        }
+
+        tbody tr {
+            transition: background .2s ease;
+        }
+
+        tbody tr:hover { background: #fbf5ed; }
+
+        .username { font-weight: 700; }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 30px;
+            background: #eee8df;
+            color: #776a5e;
+            font-size: 11px;
+        }
+
+        .badge.completed { background: #e7ecdc; color: #53653c; }
+        .badge.processing { background: #f5ebd5; color: #8d6828; }
+        .badge.failed { background: #f4dfda; color: #963e32; }
+
+        .empty {
+            padding: 50px 20px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            color: var(--accent);
+            font-size: 30px;
+        }
+
+        .empty h3 {
+            margin: 12px 0 8px;
+            font-family: "Playfair Display", serif;
+            font-size: 23px;
+            font-weight: 500;
+        }
+
+        .empty p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 20px;
+            border-top: 1px solid var(--line);
+            font-size: 13px;
+        }
+
+        .page-link {
+            padding: 9px 13px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            transition: all .2s ease;
+        }
+
+        .page-link:hover {
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+        }
+
+        .footer {
+            margin-top: 25px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        @keyframes appear {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 22px 14px; }
+            .panel-header { padding: 17px; }
+            th, td { padding: 13px 15px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <a class="back" href="/dashboard/">← Kembali ke Dashboard</a>
+
+    <header>
+        <div class="eyebrow">FITME.AI / WORKSPACE</div>
+        <h1>{{ title }}</h1>
+
+        {% if section == "users" %}
+            <p class="subtitle">
+                Daftar akun yang terdaftar di FitMe.ai.
+            </p>
+        {% elif section == "analyses" %}
+            <p class="subtitle">
+                Pantau riwayat analisis outfit seluruh pengguna.
+            </p>
+        {% elif section == "recommendations" %}
+            <p class="subtitle">
+                Lihat rekomendasi outfit yang tersimpan.
+            </p>
+        {% elif section == "wardrobe" %}
+            <p class="subtitle">
+                Kelola informasi item pakaian milik pengguna.
+            </p>
+        {% endif %}
+    </header>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>
+                {% if section == "users" %}
+                    Data pengguna
+                {% elif section == "analyses" %}
+                    Riwayat analisis
+                {% elif section == "recommendations" %}
+                    Data rekomendasi
+                {% else %}
+                    Koleksi wardrobe
+                {% endif %}
+            </h2>
+
+            <span class="count">
+                {{ page_obj.paginator.count }} data
+            </span>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        {% if section == "users" %}
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Tanggal bergabung</th>
+
+                        {% elif section == "analyses" %}
+                            <th>Pengguna</th>
+                            <th>Acara</th>
+                            <th>Gaya</th>
+                            <th>Status</th>
+                            <th>Tanggal</th>
+
+                        {% elif section == "recommendations" %}
+                            <th>Pengguna</th>
+                            <th>Acara</th>
+                            <th>Tanggal</th>
+
+                        {% elif section == "wardrobe" %}
+                            <th>Pengguna</th>
+                            <th>Nama item</th>
+                            <th>Kategori</th>
+                            <th>Warna</th>
+                            <th>Tanggal</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in page_obj %}
+                    <tr>
+                        {% if section == "users" %}
+                            <td class="username">{{ row.username }}</td>
+                            <td>{{ row.email|default:"—" }}</td>
+                            <td>{{ row.date_joined|date:"d M Y, H:i" }}</td>
+
+                        {% elif section == "analyses" %}
+                            <td class="username">{{ row.owner.username }}</td>
+                            <td>{{ row.get_occasion_display }}</td>
+                            <td>{{ row.preferred_style|default:"—" }}</td>
+                            <td>
+                                <span class="badge {{ row.status|lower }}">
+                                    {{ row.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ row.created_at|date:"d M Y, H:i" }}</td>
+
+                        {% elif section == "recommendations" %}
+                            <td class="username">{{ row.analysis.owner.username }}</td>
+                            <td>{{ row.analysis.get_occasion_display }}</td>
+                            <td>{{ row.created_at|date:"d M Y, H:i" }}</td>
+
+                        {% elif section == "wardrobe" %}
+                            <td class="username">{{ row.owner.username }}</td>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.category }}</td>
+                            <td>{{ row.color|default:"—" }}</td>
+                            <td>{{ row.created_at|date:"d M Y, H:i" }}</td>
+                        {% endif %}
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty">
+                                <div class="empty-icon">✧</div>
+                                <h3>Belum ada data</h3>
+                                <p>Data akan muncul di sini setelah tersedia.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="pagination" aria-label="Navigasi halaman">
+            {% if page_obj.has_previous %}
+                <a class="page-link"
+                   href="?page={{ page_obj.previous_page_number }}">
+                    ← Sebelumnya
+                </a>
+            {% endif %}
+
+            <span>
+                Halaman {{ page_obj.number }}
+                dari {{ page_obj.paginator.num_pages }}
+            </span>
+
+            {% if page_obj.has_next %}
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}">
+                    Berikutnya →
+                </a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </section>
+
+    <footer class="footer">
+        © 2026 FitMe.ai · Outfit analysis & personal styling
+    </footer>
+</body>
+</html>

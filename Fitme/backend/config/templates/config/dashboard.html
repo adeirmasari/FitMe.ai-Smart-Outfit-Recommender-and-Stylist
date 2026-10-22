@@ -1,0 +1,1261 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin | FitMe.ai</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --maroon: #641e30;
+            --maroon-dark: #4d1726;
+            --maroon-mid: #80394b;
+            --maroon-light: #f5e6e8;
+            --cream: #faf5f1;
+            --white: #ffffff;
+            --text: #34272a;
+            --muted: #82777a;
+            --border: #eee5e1;
+            --green: #31815b;
+            --green-bg: #e6f3e9;
+            --shadow: 0 5px 22px rgba(72, 38, 45, .045);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--cream);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        /* SIDEBAR MARUN */
+        .sidebar {
+            width: 270px;
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            padding: 27px 16px 22px;
+            color: #fff5ed;
+            background: linear-gradient(165deg, #702236 0%, #561b2b 58%, #481624 100%);
+            overflow-y: auto;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 3px 14px 38px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            border-radius: 13px;
+            background: #fff5ed;
+            color: var(--maroon);
+            font-size: 29px;
+            font-weight: 800;
+        }
+
+        .brand-name {
+            color: #fff5ed;
+            font-size: 25px;
+            font-weight: 800;
+            letter-spacing: -.8px;
+        }
+
+        .brand-subtitle {
+            margin-top: 4px;
+            color: #e6cbd0;
+            font-size: 9px;
+            letter-spacing: 1.1px;
+        }
+
+        .nav-label {
+            padding: 10px 14px 12px;
+            color: #d8b3bc;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.7px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            min-height: 49px;
+            margin-bottom: 5px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            color: #f8e9e8;
+            font-size: 13px;
+            text-decoration: none;
+            transition: background .2s ease, color .2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 245, 237, .10);
+            color: #ffffff;
+        }
+
+        .nav-link.active {
+            background: #8a3d50;
+            color: #ffffff;
+            box-shadow: 0 5px 14px rgba(35, 6, 16, .13);
+            font-weight: 700;
+        }
+
+        .nav-icon {
+            width: 22px;
+            flex-shrink: 0;
+            text-align: center;
+            font-size: 21px;
+            line-height: 1;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            margin: 18px 10px;
+            background: rgba(255, 245, 237, .22);
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            padding: 20px 12px 0;
+        }
+
+        .sidebar-note {
+            color: #e4c8cd;
+            font-size: 11px;
+            line-height: 1.9;
+        }
+
+        .sidebar-note strong {
+            color: #fff5ed;
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            min-height: 100vh;
+            margin-left: 270px;
+        }
+
+        .topbar {
+            height: 61px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 0 34px;
+            background: rgba(255, 252, 249, .96);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--maroon);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .topbar-avatar {
+            width: 29px;
+            height: 29px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--maroon);
+            color: #fff5ed;
+            font-size: 12px;
+        }
+
+        .topbar-role {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .logout-form {
+            margin-left: 8px;
+        }
+
+        .logout-btn {
+            padding: 8px 12px;
+            border: 1px solid #ead8dc;
+            border-radius: 9px;
+            background: white;
+            color: var(--maroon);
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: .2s ease;
+        }
+
+        .logout-btn:hover {
+            background: var(--maroon);
+            color: white;
+            border-color: var(--maroon);
+        }
+
+        /* HERO BANNER */
+        .hero {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-height: 260px;
+            padding: 35px 42px;
+            overflow: hidden;
+            isolation: isolate;
+            background:
+                radial-gradient(ellipse at 75% 10%, #fffaf7 0%, transparent 39%),
+                linear-gradient(112deg, #f7e9e5 0%, #f2dcd8 56%, #e8c7c4 100%);
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            width: 430px;
+            height: 430px;
+            right: 15%;
+            top: -245px;
+            border: 1px solid rgba(112, 34, 54, .09);
+            border-radius: 50%;
+            box-shadow: 0 0 0 35px rgba(255,255,255,.12),
+                        0 0 0 75px rgba(255,255,255,.10);
+        }
+
+        .hero-copy {
+            width: 58%;
+            max-width: 570px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-eyebrow {
+            color: var(--maroon);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .hero h1 {
+            color: var(--maroon);
+            font-size: clamp(35px, 4vw, 59px);
+            line-height: 1.06;
+            letter-spacing: -2px;
+            font-weight: 800;
+        }
+
+        .hero-description {
+            max-width: 440px;
+            margin-top: 15px;
+            color: #60484d;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .hero-tagline {
+            position: absolute;
+            z-index: 2;
+            top: 50%;
+            right: 34px;
+            width: 155px;
+            transform: translateY(-50%);
+            color: var(--maroon);
+            font-family: 'Playfair Display', serif;
+            font-size: 27px;
+            line-height: 1.2;
+        }
+
+        .hero-tagline::after {
+            content: "";
+            display: block;
+            width: 38px;
+            height: 1px;
+            margin-top: 17px;
+            background: var(--maroon);
+        }
+
+        .hero-fashion {
+            position: absolute;
+            z-index: 1;
+            right: 18%;
+            bottom: 0;
+            width: 270px;
+            height: 210px;
+            opacity: .94;
+            pointer-events: none;
+        }
+
+        .rack {
+            position: absolute;
+            left: 25px;
+            right: 5px;
+            top: 45px;
+            height: 145px;
+            border-top: 5px solid #6d4140;
+            border-left: 4px solid #6d4140;
+            border-right: 4px solid #6d4140;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .rack::before,
+        .rack::after {
+            content: "";
+            position: absolute;
+            bottom: -7px;
+            width: 5px;
+            height: 20px;
+            background: #6d4140;
+        }
+
+        .rack::before {
+            left: -4px;
+        }
+
+        .rack::after {
+            right: -4px;
+        }
+
+        .hanger {
+            position: absolute;
+            top: 27px;
+            width: 44px;
+            height: 13px;
+            border-top: 2px solid #9a7771;
+            border-radius: 50%;
+            transform: rotate(3deg);
+        }
+
+        .hanger::before {
+            content: "";
+            position: absolute;
+            width: 9px;
+            height: 12px;
+            top: -9px;
+            left: 18px;
+            border: 2px solid #9a7771;
+            border-bottom: 0;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .hanger:nth-child(1) { left: 20px; }
+        .hanger:nth-child(2) { left: 62px; }
+        .hanger:nth-child(3) { left: 103px; }
+        .hanger:nth-child(4) { left: 144px; }
+        .hanger:nth-child(5) { left: 183px; }
+
+        .garment {
+            position: absolute;
+            top: 40px;
+            width: 40px;
+            height: 113px;
+            border-radius: 7px 7px 3px 3px;
+            clip-path: polygon(25% 0, 42% 9%, 58% 9%, 75% 0, 100% 20%, 85% 35%, 80% 100%, 20% 100%, 15% 35%, 0 20%);
+        }
+
+        .garment:nth-of-type(2) { left: 23px; background: #f4e3d3; }
+        .garment:nth-of-type(3) { left: 62px; background: #d4b6a6; }
+        .garment:nth-of-type(4) { left: 101px; background: #eee0d4; }
+        .garment:nth-of-type(5) { left: 140px; background: #a95d69; }
+        .garment:nth-of-type(6) { left: 179px; background: #72283d; }
+
+        .hero-bag {
+            position: absolute;
+            bottom: 8px;
+            left: 4px;
+            width: 48px;
+            height: 36px;
+            border-radius: 7px 7px 4px 4px;
+            background: #49312f;
+            box-shadow: 0 4px 8px rgba(60,30,30,.15);
+        }
+
+        .hero-bag::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: -16px;
+            width: 20px;
+            height: 17px;
+            border: 3px solid #49312f;
+            border-bottom: 0;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* CONTENT AREA */
+        .content {
+            padding: 27px 30px 32px;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 17px;
+        }
+
+        .section-heading h2 {
+            color: var(--maroon);
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+        }
+
+        .section-description {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        /* STAT CARDS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 26px;
+        }
+
+        .stat-card {
+            display: block;
+            min-width: 0;
+            padding: 20px;
+            border: 1px solid #f0e8e4;
+            border-radius: 14px;
+            background: rgba(255,255,255,.9);
+            box-shadow: var(--shadow);
+            text-decoration: none;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(72, 38, 45, .08);
+        }
+
+        .stat-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 17px;
+        }
+
+        .stat-icon {
+            width: 43px;
+            height: 43px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: var(--maroon-light);
+            color: var(--maroon);
+            font-size: 21px;
+        }
+
+        .stat-label {
+            color: #6d5559;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .stat-value {
+            color: var(--maroon);
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(26px, 2.2vw, 34px);
+            font-weight: 700;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+
+        .stat-foot {
+            margin-top: 8px;
+            color: var(--green);
+            font-size: 11px;
+        }
+
+        .stat-link {
+            display: inline-block;
+            margin-top: 13px;
+            color: var(--maroon);
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* USER ACTIVITY TABLE */
+        .activity-panel {
+            overflow: hidden;
+            border: 1px solid #f0e8e4;
+            border-radius: 15px;
+            background: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 23px 25px 20px;
+        }
+
+        .panel-header h2 {
+            color: var(--maroon);
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -.4px;
+        }
+
+        .panel-caption {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .view-all {
+            flex-shrink: 0;
+            padding: 10px 14px;
+            border: 1px solid #eedfe1;
+            border-radius: 9px;
+            color: var(--maroon);
+            background: white;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: .2s ease;
+        }
+
+        .view-all:hover {
+            background: var(--maroon);
+            color: white;
+        }
+
+        .table-wrapper {
+            padding: 0 24px 16px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f7f1ed;
+        }
+
+        th {
+            padding: 13px 15px;
+            color: var(--maroon);
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        th:first-child {
+            border-radius: 8px 0 0 8px;
+        }
+
+        th:last-child {
+            border-radius: 0 8px 8px 0;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f2ece8;
+            color: #4d4244;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: #fdfaf8;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-width: 175px;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: #f0dfe2;
+            color: var(--maroon);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .user-name {
+            color: #33292b;
+            font-size: 12px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .user-email {
+            margin-top: 4px;
+            color: #93878a;
+            font-size: 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .number-cell {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .date-cell {
+            color: #82777a;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 9px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-success {
+            color: #287b57;
+            background: #e4f3e9;
+        }
+
+        .status-pending {
+            color: #a76526;
+            background: #fff0dc;
+        }
+
+        .status-neutral {
+            color: #77706b;
+            background: #f0eeec;
+        }
+
+        .detail-link {
+            display: inline-block;
+            padding: 8px 11px;
+            border-radius: 8px;
+            background: #f6e9ea;
+            color: var(--maroon);
+            font-size: 10px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .detail-link:hover {
+            background: var(--maroon);
+            color: white;
+        }
+
+        .empty-state {
+            padding: 42px 20px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-state .empty-icon {
+            margin-bottom: 10px;
+            color: #b27c88;
+            font-size: 30px;
+        }
+
+        .empty-state p {
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 22px 2px 0;
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .nav-link:focus-visible,
+        .stat-card:focus-visible,
+        .logout-btn:focus-visible,
+        .view-all:focus-visible,
+        .detail-link:focus-visible {
+            outline: 3px solid #d7a6b0;
+            outline-offset: 3px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1300px) {
+            .sidebar {
+                width: 240px;
+            }
+
+            .main {
+                margin-left: 240px;
+            }
+
+            .hero {
+                padding-left: 30px;
+            }
+
+            .hero-fashion {
+                right: 18%;
+                transform: scale(.9);
+                transform-origin: bottom right;
+            }
+
+            .hero-tagline {
+                right: 20px;
+                width: 125px;
+                font-size: 23px;
+            }
+
+            .content {
+                padding: 25px 22px 30px;
+            }
+
+            .stats-grid {
+                gap: 12px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .hero-fashion {
+                right: 12%;
+                opacity: .45;
+            }
+
+            .hero-copy {
+                width: 68%;
+            }
+
+            .hero-tagline {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 700px) {
+            .sidebar {
+                width: 67px;
+                padding: 20px 8px;
+                align-items: center;
+            }
+
+            .brand {
+                padding: 0 0 28px;
+            }
+
+            .brand-icon {
+                width: 43px;
+                height: 43px;
+            }
+
+            .brand-text,
+            .nav-label,
+            .nav-text,
+            .sidebar-bottom,
+            .sidebar-divider {
+                display: none;
+            }
+
+            .sidebar nav {
+                width: 100%;
+            }
+
+            .nav-link {
+                justify-content: center;
+                width: 49px;
+                min-height: 48px;
+                padding: 0;
+                margin: 0 auto 8px;
+            }
+
+            .nav-icon {
+                font-size: 20px;
+            }
+
+            .main {
+                margin-left: 67px;
+            }
+
+            .topbar {
+                height: 56px;
+                padding: 0 14px;
+            }
+
+            .topbar-role {
+                display: none;
+            }
+
+            .logout-form {
+                margin-left: 0;
+            }
+
+            .logout-btn {
+                padding: 8px 9px;
+            }
+
+            .hero {
+                min-height: 220px;
+                padding: 27px 20px;
+            }
+
+            .hero-copy {
+                width: 100%;
+            }
+
+            .hero h1 {
+                font-size: 36px;
+                letter-spacing: -1px;
+            }
+
+            .hero-description {
+                max-width: 310px;
+                font-size: 12px;
+            }
+
+            .hero-fashion {
+                right: -20px;
+                opacity: .19;
+                transform: scale(.8);
+            }
+
+            .content {
+                padding: 22px 13px;
+            }
+
+            .section-heading h2 {
+                font-size: 18px;
+            }
+
+            .section-description {
+                font-size: 11px;
+            }
+
+            .stats-grid {
+                gap: 10px;
+            }
+
+            .stat-card {
+                padding: 13px;
+            }
+
+            .stat-top {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+
+            .stat-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 18px;
+            }
+
+            .stat-label {
+                font-size: 11px;
+            }
+
+            .stat-value {
+                font-size: 25px;
+            }
+
+            .stat-foot {
+                font-size: 10px;
+                line-height: 1.5;
+            }
+
+            .stat-link {
+                font-size: 10px;
+            }
+
+            .panel-header {
+                align-items: flex-start;
+                padding: 17px 15px;
+            }
+
+            .panel-header h2 {
+                font-size: 17px;
+            }
+
+            .panel-caption {
+                font-size: 11px;
+            }
+
+            .view-all {
+                padding: 8px 9px;
+                font-size: 10px;
+            }
+
+            .table-wrapper {
+                padding: 0 12px 12px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .brand-icon {
+                width: 39px;
+                height: 39px;
+                font-size: 24px;
+            }
+
+            .sidebar {
+                width: 57px;
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+
+            .nav-link {
+                width: 43px;
+            }
+
+            .main {
+                margin-left: 57px;
+            }
+
+            .topbar-user {
+                gap: 6px;
+                font-size: 11px;
+            }
+
+            .topbar {
+                padding: 0 8px;
+            }
+
+            .hero h1 {
+                font-size: 30px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-top {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside class="sidebar">
+        <a href="/dashboard/" class="brand" style="text-decoration:none;">
+            <div class="brand-icon">F</div>
+            <div class="brand-text">
+                <div class="brand-name">FitMe.ai</div>
+                <div class="brand-subtitle">SMART STYLE PLATFORM</div>
+            </div>
+        </a>
+
+        <div class="nav-label">MENU UTAMA</div>
+
+        <nav>
+            <a class="nav-link active" href="/dashboard/" title="Dashboard">
+                <span class="nav-icon">⌂</span>
+                <span class="nav-text">Dashboard</span>
+            </a>
+
+            <a class="nav-link" href="/dashboard/users/" title="Pengguna">
+                <span class="nav-icon">♙</span>
+                <span class="nav-text">Users</span>
+            </a>
+
+            <a class="nav-link" href="/dashboard/analyses/" title="Analisis Outfit">
+                <span class="nav-icon">▥</span>
+                <span class="nav-text">Analyses</span>
+            </a>
+
+            <a class="nav-link" href="/dashboard/recommendations/" title="Rekomendasi">
+                <span class="nav-icon">✧</span>
+                <span class="nav-text">Recommendations</span>
+            </a>
+
+            <a class="nav-link" href="/dashboard/wardrobe/" title="Wardrobe">
+                <span class="nav-icon">♧</span>
+                <span class="nav-text">Wardrobe</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-divider"></div>
+
+        <nav>
+            <a class="nav-link" href="/admin/" title="Django Admin">
+                <span class="nav-icon">⚙</span>
+                <span class="nav-text">Django Admin</span>
+            </a>
+
+            <a class="nav-link" href="/api/docs/" title="Dokumentasi API">
+                <span class="nav-icon">⌘</span>
+                <span class="nav-text">API Documentation</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="sidebar-note">
+                <strong>FitMe.ai</strong><br>
+                Smart Outfit Recommender<br>
+                Admin Dashboard
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div class="topbar-user">
+                <span class="topbar-avatar">
+                    {{ request.user.username|first|upper }}
+                </span>
+                <div>
+                    <div>{{ request.user.username }}</div>
+                    <div class="topbar-role">Administrator</div>
+                </div>
+            </div>
+
+            <form class="logout-form" method="post" action="{% url 'dashboard_logout' %}">
+                {% csrf_token %}
+                <button class="logout-btn" type="submit">↪ Keluar</button>
+            </form>
+        </header>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="hero-eyebrow">SELAMAT DATANG DI</div>
+                <h1>FitMe.ai</h1>
+                <p class="hero-description">
+                    Dashboard administrasi untuk mengelola pengguna,
+                    analisis, rekomendasi, dan wardrobe.
+                </p>
+            </div>
+
+            <div class="hero-fashion" aria-hidden="true">
+                <div class="rack">
+                    <div class="hanger"></div>
+                    <div class="hanger"></div>
+                    <div class="hanger"></div>
+                    <div class="hanger"></div>
+                    <div class="hanger"></div>
+                    <div class="garment"></div>
+                    <div class="garment"></div>
+                    <div class="garment"></div>
+                    <div class="garment"></div>
+                    <div class="garment"></div>
+                </div>
+                <div class="hero-bag"></div>
+            </div>
+
+            <div class="hero-tagline">
+                Begins With<br>
+                The Bigger<br>
+                Picture
+            </div>
+        </section>
+
+        <div class="content">
+            <section id="statistik">
+                <div class="section-heading">
+                    <div>
+                        <h2>Ringkasan Platform</h2>
+                        <p class="section-description">
+                            Statistik data yang tersimpan di FitMe.ai.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <a class="stat-card" href="/dashboard/users/">
+                        <div class="stat-top">
+                            <div class="stat-icon">♙</div>
+                            <div class="stat-label">Total Pengguna</div>
+                        </div>
+                        <div class="stat-value">{{ stats.total_users|default_if_none:0 }}</div>
+                        <div class="stat-foot">↗ Pengguna terdaftar di platform</div>
+                        <span class="stat-link">Lihat pengguna →</span>
+                    </a>
+
+                    <a class="stat-card" href="/dashboard/analyses/">
+                        <div class="stat-top">
+                            <div class="stat-icon">▥</div>
+                            <div class="stat-label">Total Analisis</div>
+                        </div>
+                        <div class="stat-value">{{ stats.total_analyses|default_if_none:0 }}</div>
+                        <div class="stat-foot">↗ Total analisis outfit</div>
+                        <span class="stat-link">Lihat analisis →</span>
+                    </a>
+
+                    <a class="stat-card" href="/dashboard/recommendations/">
+                        <div class="stat-top">
+                            <div class="stat-icon">✧</div>
+                            <div class="stat-label">Total Rekomendasi</div>
+                        </div>
+                        <div class="stat-value">{{ stats.total_recommendations|default_if_none:0 }}</div>
+                        <div class="stat-foot">↗ Rekomendasi tersimpan</div>
+                        <span class="stat-link">Lihat rekomendasi →</span>
+                    </a>
+
+                    <a class="stat-card" href="/dashboard/wardrobe/">
+                        <div class="stat-top">
+                            <div class="stat-icon">♧</div>
+                            <div class="stat-label">Total Wardrobe Item</div>
+                        </div>
+                        <div class="stat-value">{{ stats.total_wardrobe_items|default_if_none:0 }}</div>
+                        <div class="stat-foot">↗ Item wardrobe tersimpan</div>
+                        <span class="stat-link">Lihat wardrobe →</span>
+                    </a>
+                </div>
+            </section>
+
+            <section id="aktivitas">
+                <div class="activity-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Aktivitas Terbaru Pengguna</h2>
+                            <p class="panel-caption">
+                                Berikut adalah aktivitas terbaru dari pengguna di platform.
+                            </p>
+                        </div>
+
+                        <a class="view-all" href="/dashboard/users/">
+                            Lihat Semua&nbsp; ›
+                        </a>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pengguna</th>
+                                    <th>Total Analisis</th>
+                                    <th>Analisis Terbaru</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for item in user_activities %}
+                                <tr>
+                                    <td>
+                                        <div class="user-cell">
+                                            <div class="user-avatar">
+                                                {{ item.user.username|first|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="user-name">
+                                                    {{ item.user.username }}
+                                                </div>
+                                                <div class="user-email">
+                                                    {{ item.user.email|default:"Email belum diisi" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="number-cell">
+                                        {{ item.total_analyses|default_if_none:0 }}
+                                    </td>
+
+                                    <td class="date-cell">
+                                        {% if item.latest_analysis %}
+                                            {{ item.latest_analysis.created_at|date:"d M Y, H:i" }}
+                                        {% else %}
+                                            Belum ada analisis
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        <a class="detail-link" href="/dashboard/users/">
+                                            Lihat Detail
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">✧</div>
+                                            <p>
+                                                Belum ada aktivitas pengguna yang bisa ditampilkan.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <span>© {% now "Y" %} FitMe.ai — Smart Outfit Recommender</span>
+                <span>Admin Dashboard</span>
+            </footer>
+        </div>
+    </main>
+</body>
+</html>

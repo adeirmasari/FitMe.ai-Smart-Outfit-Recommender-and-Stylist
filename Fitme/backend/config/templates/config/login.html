@@ -1,0 +1,321 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin | FitMe.ai</title>
+
+    <style>
+        :root {
+            --maroon: #702b3a;
+            --maroon-dark: #51202c;
+            --cream: #f8f2ed;
+            --white: #ffffff;
+            --text: #35282b;
+            --muted: #89777b;
+            --border: #eadbd8;
+            --danger: #b42332;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(
+                    circle at top left,
+                    rgba(112, 43, 58, 0.09),
+                    transparent 38%
+                ),
+                var(--cream);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .brand-icon {
+            width: 68px;
+            height: 68px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background: var(--maroon);
+            color: var(--white);
+            font-size: 30px;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(112, 43, 58, 0.18);
+        }
+
+        .brand h1 {
+            font-size: 29px;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--maroon);
+        }
+
+        .brand p {
+            margin-top: 8px;
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .login-card {
+            background: var(--white);
+            padding: 36px;
+            border: 1px solid rgba(112, 43, 58, 0.08);
+            border-radius: 22px;
+            box-shadow: 0 18px 50px rgba(73, 39, 45, 0.08);
+        }
+
+        .login-card h2 {
+            margin-bottom: 9px;
+            font-size: 23px;
+            color: var(--text);
+        }
+
+        .description {
+            margin-bottom: 28px;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .field input {
+            display: block;
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fffdfc;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .field input:focus {
+            border-color: var(--maroon);
+            box-shadow: 0 0 0 3px rgba(112, 43, 58, 0.1);
+        }
+
+        .field-error {
+            margin-top: 7px;
+            color: var(--danger);
+            font-size: 12px;
+        }
+
+        .error-message {
+            margin-bottom: 20px;
+            padding: 12px 14px;
+            border: 1px solid #f1c8cd;
+            border-radius: 10px;
+            background: #fff2f3;
+            color: var(--danger);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .login-button {
+            display: block;
+            width: 100%;
+            margin-top: 8px;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 10px;
+            background: var(--maroon);
+            color: var(--white);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .login-button:hover {
+            background: var(--maroon-dark);
+            transform: translateY(-1px);
+        }
+
+        .login-button:focus-visible {
+            outline: 3px solid rgba(112, 43, 58, 0.25);
+            outline-offset: 3px;
+        }
+
+        .security-note {
+            margin-top: 22px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        .back-link {
+            display: block;
+            margin-top: 24px;
+            text-align: center;
+            color: var(--maroon);
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            color: #a18f92;
+            font-size: 12px;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 16px;
+            }
+
+            .login-card {
+                padding: 26px 22px;
+            }
+
+            .brand h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="login-wrapper">
+        <header class="brand">
+            <div class="brand-icon">F</div>
+            <h1>FitMe.ai</h1>
+            <p>Smart Outfit Recommender and Stylist</p>
+        </header>
+
+        <section class="login-card">
+            <h2>Selamat Datang</h2>
+            <p class="description">
+                Masuk menggunakan akun administrator untuk mengakses dashboard FitMe.ai.
+            </p>
+
+            {% if form.errors %}
+                <div class="error-message" role="alert">
+                    Username atau password salah, atau akun tidak dapat digunakan untuk login.
+                    Silakan periksa kembali informasi akun Anda.
+                </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}
+                <div class="error-message" role="alert">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+
+                {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <div class="field">
+                    <label for="{{ form.username.id_for_label }}">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        name="{{ form.username.html_name }}"
+                        id="{{ form.username.id_for_label }}"
+                        placeholder="Masukkan username"
+                        autocomplete="username"
+                        maxlength="150"
+                        value="{{ form.username.value|default_if_none:'' }}"
+                        required
+                        autofocus
+                    >
+
+                    {% if form.username.errors %}
+                        <div class="field-error">
+                            {{ form.username.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        name="{{ form.password.html_name }}"
+                        id="{{ form.password.id_for_label }}"
+                        placeholder="Masukkan password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                    {% if form.password.errors %}
+                        <div class="field-error">
+                            {{ form.password.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="login-button">
+                    Masuk ke Dashboard
+                </button>
+            </form>
+
+            <p class="security-note">
+                Halaman khusus administrator.<br>
+                Jaga kerahasiaan username dan password Anda.
+            </p>
+        </section>
+
+        <a href="/" class="back-link">
+            ← Kembali ke halaman utama
+        </a>
+
+        <footer class="footer">
+            &copy; {% now "Y" %} FitMe.ai. All rights reserved.
+        </footer>
+    </main>
+</body>
+</html>
