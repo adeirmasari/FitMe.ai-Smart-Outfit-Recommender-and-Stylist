@@ -9,6 +9,7 @@ import { renderLanding } from "./views/landing.js";
 import { renderNotFound } from "./views/notfound.js";
 import { renderProfile } from "./views/profile.js";
 import { renderResult } from "./views/result.js";
+import { renderWardrobe } from "./views/wardrobe.js";
 
 const main = document.getElementById("main");
 const nav = document.getElementById("site-nav");
@@ -21,6 +22,7 @@ route("/analyze", renderAnalyze, { auth: true, title: "Analyze an outfit" });
 route("/analyses/:id", renderResult, { auth: true, title: "Analysis" });
 route("/history", renderHistory, { auth: true, title: "History" });
 route("/profile", renderProfile, { auth: true, title: "Profile" });
+route("/wardrobe", renderWardrobe, { auth: true, title: "Digital Wardrobe" });
 
 let cleanups = [];
 let renderSeq = 0;
@@ -42,12 +44,13 @@ function renderNav() {
   const link = (href, label) =>
     h("a", { href, "aria-current": here === href || (href === "/history" && here.startsWith("/analyses/")) ? "page" : null }, label);
   if (session.isAuthenticated()) {
-    nav.append(
-      link("/analyze", "Analyze"),
-      link("/history", "History"),
-      link("/profile", "Profile"),
-      h("button", { class: "btn btn-ghost", type: "button", onclick: handleLogout }, "Sign out"),
-    );
+      nav.append(
+    link("/analyze", "Analyze"),
+    link("/history", "History"),
+    link("/wardrobe", "Wardrobe"),
+    link("/profile", "Profile"),
+    h("button", { class: "btn btn-ghost", type: "button", onclick: handleLogout }, "Sign out"),
+  );
   } else {
     nav.append(link("/login", "Sign in"), h("a", { class: "btn", href: "/register" }, "Create account"));
   }

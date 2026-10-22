@@ -413,3 +413,54 @@ dialog .dialog-actions { display: flex; justify-content: flex-end; gap: var(--sp
 
 .view-enter { animation: fade 0.3s var(--ease); }
 @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Digital Wardrobe: Category Filter ---------- */
+
+.wardrobe-page .wardrobe-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.wardrobe-page .wardrobe-toolbar select[aria-label="Filter kategori"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+
+  display: block !important;
+  width: 100% !important;
+  min-height: 48px;
+  padding: 12px 42px 12px 16px;
+
+  font-family: var(--font-body);
+  font-size: var(--step--1);
+  line-height: 1.5;
+  color: var(--ink);
+
+  background-color: var(--paper-raised) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237c7063' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 15px !important;
+
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  cursor: pointer;
+
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wardrobe-page .wardrobe-toolbar select[aria-label="Filter kategori"]:hover {
+  border-color: var(--taupe) !important;
+}
+
+.wardrobe-page .wardrobe-toolbar select[aria-label="Filter kategori"]:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.wardrobe-page .wardrobe-toolbar select[aria-label="Filter kategori"] option {
+  color: var(--ink);
+  background-color: var(--paper-raised);
+}
