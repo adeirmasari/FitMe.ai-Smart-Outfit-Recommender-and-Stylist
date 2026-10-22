@@ -8,6 +8,13 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth import get_user_model
+from django.db.models import Count
+from django.shortcuts import render
+
+from analyses.models import OutfitAnalysis, OutfitRecommendation, WardrobeItem
+
 from ai_services.providers import provider_status
 
 
@@ -52,3 +59,33 @@ def spa(request, path=""):
     response = FileResponse(open(index, "rb"), content_type="text/html; charset=utf-8")
     response["Cache-Control"] = "no-cache"
     return response
+
+def is_admin(user):
+    return user.is_authenticated and user.is_staff
+
+
+@user_passes_test(is_admin, login_url="/admin/login/")
+def dashboard(request):
+    User = get_user_model()
+
+    stats = {
+        "total_users": User.objects.count(),
+        "total_analyses": OutfitAnalysis.objects.count(),
+        "total_recommendations": OutfitRecommendation.objects.count(),
+        "total_wardrobe_items": WardrobeItem.objects.count(),
+    }
+
+    recent_analyses = (
+        OutfitAnalysis.objects
+        .select_related("owner")
+        .order_by("-created_at")[:10]
+    )
+
+    return render(
+        request,
+        "config/dashboard.html",
+        {
+            "stats": stats,
+            "recent_analyses": recent_analyses,
+        },
+    )

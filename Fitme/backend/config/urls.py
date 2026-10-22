@@ -15,6 +15,8 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+
+    path("dashboard/", views.dashboard, name="dashboard"),
 ]
 
 if settings.DEBUG:
@@ -24,5 +26,9 @@ if settings.DEBUG:
 
 # Client-side routes. Anything that isn't API/admin/static falls through to the SPA shell.
 urlpatterns += [
-    re_path(r"^(?!api/|admin/|static/)(?P<path>.*)$", views.spa, name="spa"),
+    re_path(
+    r"^(?!api/|admin/|dashboard/|static/)(?P<path>.*)$",
+    views.spa,
+    name="spa",
+),
 ]
