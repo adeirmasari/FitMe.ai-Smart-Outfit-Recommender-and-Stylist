@@ -191,10 +191,6 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
             "article",
             {
               class: "wardrobe-item-card",
-              role: "button",
-              tabindex: "0",
-              "aria-pressed": String(state.selectedWardrobeItemId === item.id),
-              onclick: () => selectWardrobeItem(item.id),
               style: {
                 border: "1px solid var(--border)",
                 borderRadius: "12px",
@@ -244,26 +240,15 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
       wardrobeStatus.textContent = state.wardrobeError;
     } finally {
       state.wardrobeLoading = false;
+      updateSubmit();
     }
   }
 
   
-  function selectWardrobeItem(itemId) {
-    if (state.busy) return;
-
-    state.selectedWardrobeItemId = itemId;
-
-    const cards = wardrobeGrid.querySelectorAll(".wardrobe-item-card");
-    cards.forEach((card, index) => {
-      const item = state.wardrobeItems[index];
-      const selected = item?.id === itemId;
-
-      card.setAttribute("aria-pressed", String(selected));
-      card.style.borderColor = selected
-        ? "var(--accent)"
-        : "var(--border)";
-    });
-
+  
+  function selectWardrobeItem() {
+    // Digital Wardrobe menggunakan seluruh koleksi,
+    // bukan satu item yang dipilih pengguna.
     updateSubmit();
   }
 
@@ -516,33 +501,38 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
   }
 
   
-  
-  function updateSubmit() {
+    function updateSubmit() {
       const missing = [];
 
       if (state.source === "wardrobe") {
-        if (!state.selectedWardrobeItemId) {
-          missing.push("a wardrobe item");
+        if (state.wardrobeLoading) {
+          missing.push("wardrobe loading to finish");
+        } else if (!state.wardrobeItems.length) {
+          missing.push("at least one wardrobe item");
         }
       } else if (!state.file) {
         missing.push("a photo");
       }
 
-      if (!selectedOccasion()) missing.push("an occasion");
+      if (!selectedOccasion()) {
+        missing.push("an occasion");
+      }
 
-      const blocked = !providerReady || state.busy || missing.length > 0;
+      const providerBlocked = state.source === "upload" && !providerReady;
+      const blocked = providerBlocked || state.busy || missing.length > 0;
 
       submitBtn.setAttribute("aria-disabled", String(blocked));
       submitBtn.disabled = blocked;
 
       submitHint.textContent = state.busy
         ? ""
-        : !providerReady
-          ? ""
+        : providerBlocked
+          ? "Upload analysis requires an AI provider."
           : missing.length
             ? `Add ${missing.join(" and ")} to continue.`
             : "";
     }
+
 
 
     function stageTimer() {
@@ -557,7 +547,12 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (state.busy || !providerReady) return;
+        if (
+      state.busy ||
+      (state.source === "upload" && !providerReady)
+    ) {
+      return;
+    }
     formAlert.hidden = true;
     Object.values(textFields).forEach((f) => f.setError(""));
     const fields = Object.fromEntries(Object.entries(textFields).map(([k, f]) => [k, f.control.value]));
@@ -577,20 +572,26 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
     }
 
     
+    
+    const isWardrobe = state.source === "wardrobe";
     const data = new FormData();
 
-    if (state.source === "wardrobe") {
-      data.append("wardrobe_item_id", state.selectedWardrobeItemId);
-    } else {
+    if (!isWardrobe) {
       data.append("image", state.file, state.file.name);
     }
 
-data.append("occasion", selectedOccasion());
+    data.append("occasion", selectedOccasion());
 
     for (const [key, value] of Object.entries(fields)) {
-      if (key === "occasion_detail" && selectedOccasion() !== "other") continue;
-      if (value.trim()) data.append(key, value.trim());
+      if (key === "occasion_detail" && selectedOccasion() !== "other") {
+        continue;
+      }
+
+      if (value.trim()) {
+        data.append(key, value.trim());
+      }
     }
+
 
     state.busy = true;
     state.controller = new AbortController();
@@ -607,27 +608,49 @@ data.append("occasion", selectedOccasion());
     let stopStages = () => {};
 
     try {
-      const result = await upload("/api/analyses/", data, {
-        signal: state.controller.signal,
-        onProgress: (fraction) => {
-          progressFill.style.width = `${Math.round(fraction * 100)}%`;
-          progressLabel.textContent =
-            state.source === "wardrobe"
-              ? "Submitting wardrobe item…"
-              : `Uploading photo… ${Math.round(fraction * 100)}%`;
-        },
-        onUploaded: () => {
-        progressFill.style.width = "";
-        progressFill.classList.add("indeterminate");
-        stopStages = stageTimer();
+      
+const endpoint = isWardrobe
+  ? "/api/analyses/wardrobe-recommendation/"
+  : "/api/analyses/";
 
-        progressLabel.textContent =
-          state.source === "wardrobe"
-            ? "Sending wardrobe item for analysis…"
-            : STAGES[0][1];
+    const result = await upload(endpoint, data, {
+      signal: state.controller.signal,
+
+      onProgress: (fraction) => {
+        progressFill.style.width = `${Math.round(fraction * 100)}%`;
+
+        progressLabel.textContent = isWardrobe
+          ? "Preparing your Digital Wardrobe..."
+          : `Uploading photo... ${Math.round(fraction * 100)}%`;
       },
+
+      onUploaded: () => {
+        if (isWardrobe) {
+          progressFill.style.width = "100%";
+          progressFill.classList.remove("indeterminate");
+          progressLabel.textContent =
+            "Preparing your wardrobe collection...";
+        } else {
+          progressFill.style.width = "";
+          progressFill.classList.add("indeterminate");
+          progressLabel.textContent = STAGES[0][1];
+        }
+      },
+    });
+
+    if (isWardrobe) {
+      formAlert.replaceChildren(
+        h("strong", {}, "Digital Wardrobe berhasil disiapkan."),
+        ` Sebanyak ${result.wardrobe_count} item pakaian berhasil dimuat untuk persiapan rekomendasi. Integrasi AI belum dijalankan.`
+      );
+
+      formAlert.hidden = false;
+    } else {
+      ctx.navigate(`/analyses/${result.id}`, {
+        state: { analysis: result },
       });
-      ctx.navigate(`/analyses/${result.id}`, { state: { analysis: result } });
+    }
+
     } catch (error) {
       if (error.name === "AbortError") return;
       if (error instanceof ApiError && error.data?.analysis) {
@@ -677,7 +700,7 @@ data.append("occasion", selectedOccasion());
       "div",
       { class: "alert alert-notice", role: "status" },
       h("strong", {}, "Analysis is unavailable right now."),
-      "No AI provider is configured on this server, so outfits can't be analyzed. Your history is still available.",
+      "No AI provider is configured. Upload analysis is unavailable, but Digital Wardrobe can prepare your clothing collection.",
     );
   } else if (provider.is_mock) {
     banner = h(

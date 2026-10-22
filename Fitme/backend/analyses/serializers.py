@@ -44,6 +44,30 @@ class AnalysisCreateSerializer(serializers.Serializer):
         return attrs
 
 
+class WardrobeRecommendationRequestSerializer(serializers.Serializer):
+    occasion = serializers.ChoiceField(choices=Occasion.choices)
+    occasion_detail = serializers.CharField(
+        max_length=80,
+        required=False,
+        allow_blank=True,
+    )
+    preferred_style = serializers.CharField(
+        max_length=120,
+        required=False,
+        allow_blank=True,
+    )
+    desired_impression = serializers.CharField(
+        max_length=120,
+        required=False,
+        allow_blank=True,
+    )
+    additional_context = serializers.CharField(
+        max_length=300,
+        required=False,
+        allow_blank=True,
+    )
+
+
 class ErrorInfoSerializer(serializers.Serializer):
     code = serializers.CharField()
     message = serializers.CharField()

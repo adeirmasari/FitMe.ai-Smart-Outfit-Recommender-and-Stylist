@@ -19,6 +19,7 @@ from .serializers import (
     AnalysisListSerializer,
     WardrobeItemCreateSerializer,
     WardrobeItemSerializer,
+    WardrobeRecommendationRequestSerializer,
 )
 
 FailedAnalysisResponse = inline_serializer(
@@ -152,25 +153,93 @@ class AnalysisViewSet(
         return _failure_response(analysis)
 
 
+    
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="wardrobe-recommendation",
+        url_name="wardrobe-recommendation",
+    )
+    def wardrobe_recommendation(self, request):
+        serializer = WardrobeRecommendationRequestSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        items = WardrobeItem.objects.filter(
+            owner=request.user
+        ).order_by("-created_at")
+
+        if not items.exists():
+            return Response(
+                {
+                    "error": {
+                        "code": "empty_wardrobe",
+                        "message": (
+                            "Digital Wardrobe masih kosong. "
+                            "Tambahkan pakaian terlebih dahulu."
+                        ),
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        wardrobe_data = WardrobeItemSerializer(
+            items,
+            many=True,
+            context=self.get_serializer_context(),
+        ).data
+
+        return Response(
+            {
+                "status": "prepared",
+                "message": (
+                    "Koleksi pakaian dan preferensi berhasil disiapkan. "
+                    "Rekomendasi AI belum dijalankan."
+                ),
+                "preferences": serializer.validated_data,
+                "wardrobe_items": wardrobe_data,
+                "wardrobe_count": len(wardrobe_data),
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @extend_schema(
         tags=["analyses"],
         summary="Retry a failed analysis with the same photo",
         request=None,
-        responses={200: AnalysisDetailSerializer, 409: OpenApiResponse(description="Not retryable"), 502: FailedAnalysisResponse},
+        responses={
+            200: AnalysisDetailSerializer,
+            409: OpenApiResponse(description="Not retryable"),
+            502: FailedAnalysisResponse,
+        },
     )
     @action(detail=True, methods=["post"])
     def retry(self, request, pk=None):
         analysis = self.get_object()
         if analysis.status != AnalysisStatus.FAILED:
             return Response(
-                {"error": {"code": "not_retryable", "message": "Only failed analyses can be retried."}},
+                {
+                    "error": {
+                        "code": "not_retryable",
+                        "message": "Only failed analyses can be retried.",
+                    }
+                },
                 status=status.HTTP_409_CONFLICT,
             )
         provider = get_provider()
         try:
             services.run_analysis(analysis, provider=provider)
         except services.AnalysisConflict as exc:
-            return Response({"error": {"code": "not_retryable", "message": str(exc)}}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {
+                    "error": {
+                        "code": "not_retryable",
+                        "message": str(exc),
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         analysis = self.get_queryset().get(pk=analysis.pk)
         if analysis.status == AnalysisStatus.COMPLETED:
             return Response(AnalysisDetailSerializer(analysis).data)
