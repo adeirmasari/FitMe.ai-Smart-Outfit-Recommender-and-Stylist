@@ -34,30 +34,40 @@ class GeminiProvider(VisionProvider):
 
     def _generate(self, image_bytes, system, prompt):
         if not self.is_configured():
-            raise ProviderNotConfigured("GEMINI_API_KEY / GEMINI_MODEL missing")
+            raise ProviderNotConfigured(
+                "GEMINI_API_KEY / GEMINI_MODEL missing"
+            )
 
         url = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model}:generateContent"
         )
         payload = {
-            "systemInstruction": {"parts": [{"text": system}]},
-            "contents": [{
-                "role": "user",
-                "parts": [
-                    {"text": prompt},
-                    {
-                        "inlineData": {
-                            "mimeType": "image/jpeg",
-                            "data": base64.b64encode(image_bytes).decode("ascii"),
-                        }
-                    },
-                ],
-            }],
+            "systemInstruction": {
+                "parts": [{"text": system}]
+            },
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inlineData": {
+                                "mimeType": "image/jpeg",
+                                "data": base64.b64encode(
+                                    image_bytes
+                                ).decode("ascii"),
+                            }
+                        },
+                    ],
+                }
+            ],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "temperature": 0.2,
                 "maxOutputTokens": 4096,
+                "thinkingConfig": {
+                    "thinkingLevel": "low"
+                },
             },
         }
         headers = {
@@ -74,18 +84,34 @@ class GeminiProvider(VisionProvider):
         for attempt in range(attempts):
             try:
                 response = self.session.post(
-                    url, json=payload, headers=headers, timeout=timeout
+                    url,
+                    json=payload,
+                    headers=headers,
+                    timeout=timeout,
                 )
+            except requests.ConnectTimeout as exc:
+                raise ProviderTimeout(
+                    "Gemini connection timed out"
+                ) from exc
+            except requests.ReadTimeout as exc:
+                raise ProviderTimeout(
+                    "Gemini response timed out"
+                ) from exc
             except requests.Timeout as exc:
-                raise ProviderTimeout("Gemini timed out") from exc
+                raise ProviderTimeout(
+                    "Gemini timed out"
+                ) from exc
             except requests.RequestException as exc:
                 if attempt + 1 == attempts:
-                    raise ProviderUnavailable("Gemini network error") from exc
+                    raise ProviderUnavailable(
+                        "Gemini network error"
+                    ) from exc
             else:
                 if response.status_code in (401, 403, 404):
                     raise ProviderNotConfigured(
                         f"Gemini HTTP {response.status_code}"
                     )
+
                 if response.status_code in (429, 500, 502, 503, 504):
                     if attempt + 1 == attempts:
                         raise ProviderUnavailable(
@@ -97,7 +123,9 @@ class GeminiProvider(VisionProvider):
                     )
                 else:
                     if len(response.content) > 256 * 1024:
-                        raise InvalidModelOutput("Gemini response too large")
+                        raise InvalidModelOutput(
+                            "Gemini response too large"
+                        )
 
                     try:
                         body = response.json()
@@ -109,7 +137,12 @@ class GeminiProvider(VisionProvider):
                         )
                         if not text:
                             raise ValueError("empty candidate")
-                    except (ValueError, KeyError, IndexError, TypeError) as exc:
+                    except (
+                        ValueError,
+                        KeyError,
+                        IndexError,
+                        TypeError,
+                    ) as exc:
                         raise InvalidModelOutput(
                             "Gemini response has no JSON text"
                         ) from exc
@@ -127,7 +160,9 @@ class GeminiProvider(VisionProvider):
                             if key in usage
                         },
                     }
-                    elapsed = int((time.monotonic() - started) * 1000)
+                    elapsed = int(
+                        (time.monotonic() - started) * 1000
+                    )
                     return text, elapsed, metadata
 
             if attempt + 1 < attempts:
@@ -153,7 +188,7 @@ class GeminiProvider(VisionProvider):
         )
 
     def recommend_wardrobe(self, request, catalog):
-        """Jalur baru: pilih pakaian dari kolase Digital Wardrobe."""
+        """Pilih pakaian dari kolase Digital Wardrobe."""
         candidates = [
             {
                 key: entry[key]
@@ -194,10 +229,15 @@ class GeminiProvider(VisionProvider):
         )
 
         text, latency, metadata = self._generate(
-            request.image_bytes, system, prompt
+            request.image_bytes,
+            system,
+            prompt,
         )
         return ProviderResult(
-            data=normalize_wardrobe_result(extract_json(text), catalog),
+            data=normalize_wardrobe_result(
+                extract_json(text),
+                catalog,
+            ),
             provider=self.name,
             model=self.model,
             is_mock=False,

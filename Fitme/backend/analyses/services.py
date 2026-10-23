@@ -12,11 +12,16 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
-from ai_services.base import AnalysisRequest, ProviderError
+from ai_services.base import (
+    AnalysisRequest,
+    ProviderError,
+    ProviderNotConfigured,
+    WardrobeChanged,
+)
 from ai_services.providers import get_provider
 
 from .imaging import model_input
-from .models import AnalysisStatus, OutfitAnalysis, OutfitRecommendation
+from .models import AnalysisStatus, OutfitAnalysis, OutfitRecommendation, WardrobeItem
 
 logger = logging.getLogger(__name__)
 
@@ -54,13 +59,15 @@ def _provider_error_classes():
         base.ProviderUnavailable,
         base.ProviderRejected,
         base.InvalidModelOutput,
+        base.WardrobeChanged,
         base.ProviderError,
     ]
 
 
 def stale_cutoff():
-    budget = settings.QWEN["CONNECT_TIMEOUT_SECONDS"] + settings.QWEN["TIMEOUT_SECONDS"]
-    budget *= 1 + settings.QWEN["MAX_RETRIES"]
+    config = settings.GEMINI if settings.AI_PROVIDER == "gemini" else settings.QWEN
+    budget = config["CONNECT_TIMEOUT_SECONDS"] + config["TIMEOUT_SECONDS"]
+    budget *= 1 + config["MAX_RETRIES"]
     return timezone.now() - timedelta(seconds=budget + 60)
 
 
@@ -118,7 +125,34 @@ def run_analysis(analysis, provider=None):
             desired_impression=analysis.desired_impression,
             additional_context=analysis.additional_context,
         )
-        result = provider.analyze(request)
+        if analysis.source == "wardrobe":
+            catalog = analysis.wardrobe_snapshot
+            item_ids = [entry.get("id") for entry in catalog if isinstance(entry, dict)]
+            if len(item_ids) != len(catalog) or not item_ids:
+                raise WardrobeChanged("Wardrobe snapshot is incomplete")
+
+            def owned_categories():
+                return {
+                    str(item.id): item.category
+                    for item in WardrobeItem.objects.filter(
+                        owner=analysis.owner, id__in=item_ids
+                    )
+                }
+
+            live = owned_categories()
+            if any(live.get(entry["id"]) != entry["category"] for entry in catalog):
+                raise WardrobeChanged("Wardrobe item deleted or changed category")
+
+            recommend = getattr(provider, "recommend_wardrobe", None)
+            if not callable(recommend):
+                raise ProviderNotConfigured("Provider has no wardrobe recommendation")
+            result = recommend(request, catalog)
+
+            live = owned_categories()
+            if any(live.get(entry["id"]) != entry["category"] for entry in catalog):
+                raise WardrobeChanged("Wardrobe item deleted during inference")
+        else:
+            result = provider.analyze(request)
     except ProviderError as exc:
         # Log the category and internal detail only; never the image or credentials.
         logger.warning("Analysis %s failed: %s (%s)", analysis.pk, exc.code, exc)

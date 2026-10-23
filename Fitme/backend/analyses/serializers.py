@@ -117,6 +117,7 @@ class RecommendationSerializer(serializers.ModelSerializer):
             "primary_recommendation",
             "color_suggestions",
             "alternative_outfits",
+            "outfits",
             "occasion_rationale",
             "limitations",
             "source",
@@ -164,7 +165,7 @@ class AnalysisListSerializer(_AnalysisBase):
 
     class Meta:
         model = OutfitAnalysis
-        fields = ["id", "created_at", "occasion", "occasion_label", "status", "error", "thumbnail_url", "summary", "is_mock"]
+        fields = ["id", "source", "created_at", "occasion", "occasion_label", "status", "error", "thumbnail_url", "summary", "is_mock"]
 
     def _rec(self, obj):
         return getattr(obj, "recommendation", None) if obj.status == "completed" else None
@@ -189,6 +190,7 @@ class AnalysisDetailSerializer(_AnalysisBase):
         model = OutfitAnalysis
         fields = [
             "id",
+            "source",
             "created_at",
             "updated_at",
             "occasion",
