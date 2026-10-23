@@ -1,5 +1,11 @@
 from django.http import FileResponse, Http404
-from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+    inline_serializer,
+)
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,12 +27,18 @@ from .serializers import (
     WardrobeItemSerializer,
     WardrobeRecommendationRequestSerializer,
 )
+from .wardrobe_collage import build_wardrobe_collage
+
 
 FailedAnalysisResponse = inline_serializer(
     "FailedAnalysisResponse",
     {
         "error": inline_serializer(
-            "FailedAnalysisError", {"code": serializers.CharField(), "message": serializers.CharField()}
+            "FailedAnalysisError",
+            {
+                "code": serializers.CharField(),
+                "message": serializers.CharField(),
+            },
         ),
         "analysis": AnalysisDetailSerializer(),
     },
@@ -44,7 +56,10 @@ def _failure_response(analysis):
     )
     return Response(
         {
-            "error": {"code": info["code"], "message": info["message"]},
+            "error": {
+                "code": info["code"],
+                "message": info["message"],
+            },
             "analysis": AnalysisDetailSerializer(analysis).data,
         },
         status=http_status,
@@ -52,17 +67,29 @@ def _failure_response(analysis):
 
 
 @extend_schema_view(
-    list=extend_schema(tags=["analyses"], summary="List your analyses (newest first)"),
-    retrieve=extend_schema(tags=["analyses"], summary="Get one of your analyses"),
-    destroy=extend_schema(tags=["analyses"], summary="Delete an analysis and its stored photo"),
+    list=extend_schema(
+        tags=["analyses"],
+        summary="List your analyses (newest first)",
+    ),
+    retrieve=extend_schema(
+        tags=["analyses"],
+        summary="Get one of your analyses",
+    ),
+    destroy=extend_schema(
+        tags=["analyses"],
+        summary="Delete an analysis and its stored photo",
+    ),
 )
 class AnalysisViewSet(
-    mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
 ):
     lookup_value_regex = "[0-9a-fA-F-]{36}"
 
     def get_queryset(self):
-        # Every query is scoped to the requesting user; other users' records are simply 404.
+        # Setiap pengguna hanya dapat mengakses analisis miliknya.
         qs = OutfitAnalysis.objects.filter(owner=self.request.user)
         if self.action in ("list", "retrieve"):
             services.expire_stale(qs)
@@ -76,7 +103,7 @@ class AnalysisViewSet(
         return AnalysisDetailSerializer
 
     def get_throttles(self):
-        if self.action in ("create", "retry"):
+        if self.action in ("create", "retry", "wardrobe_recommendation"):
             self.throttle_scope = "analysis_create"
             return [ScopedRateThrottle(), UserRateThrottle()]
         return [UserRateThrottle()]
@@ -87,13 +114,16 @@ class AnalysisViewSet(
         request={"multipart/form-data": AnalysisCreateSerializer},
         responses={
             201: AnalysisDetailSerializer,
-            400: OpenApiResponse(description="Validation error (image, occasion or text fields)"),
+            400: OpenApiResponse(
+                description="Validation error (image, occasion or text fields)"
+            ),
             502: FailedAnalysisResponse,
-            503: OpenApiResponse(description="No AI provider configured; nothing is stored"),
+            503: OpenApiResponse(
+                description="No AI provider configured; nothing is stored"
+            ),
             504: FailedAnalysisResponse,
         },
     )
-    
     def create(self, request):
         provider = get_provider()
         if not provider.is_configured():
@@ -101,7 +131,10 @@ class AnalysisViewSet(
                 {
                     "error": {
                         "code": "provider_not_configured",
-                        "message": "Outfit analysis is not available right now because no AI provider is configured.",
+                        "message": (
+                            "Outfit analysis is not available right now "
+                            "because no AI provider is configured."
+                        ),
                     }
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -140,8 +173,12 @@ class AnalysisViewSet(
         else:
             processed_image = serializer.context["processed_image"]
 
-        analysis = services.create_analysis(request.user, processed_image, fields)
-        analysis = services.run_analysis(analysis, provider=provider)
+        analysis = services.create_analysis(
+            request.user,
+            processed_image,
+            fields,
+        )
+        services.run_analysis(analysis, provider=provider)
         analysis = self.get_queryset().get(pk=analysis.pk)
 
         if analysis.status == AnalysisStatus.COMPLETED:
@@ -152,8 +189,24 @@ class AnalysisViewSet(
 
         return _failure_response(analysis)
 
-
-    
+    @extend_schema(
+        tags=["analyses"],
+        summary="Recommend outfits from your Digital Wardrobe with Gemini",
+        request={
+            "multipart/form-data": WardrobeRecommendationRequestSerializer
+        },
+        responses={
+            201: AnalysisDetailSerializer,
+            400: OpenApiResponse(
+                description="Wardrobe needs top and bottom"
+            ),
+            502: FailedAnalysisResponse,
+            503: OpenApiResponse(
+                description="Gemini not configured"
+            ),
+            504: FailedAnalysisResponse,
+        },
+    )
     @action(
         detail=False,
         methods=["post"],
@@ -161,48 +214,90 @@ class AnalysisViewSet(
         url_name="wardrobe-recommendation",
     )
     def wardrobe_recommendation(self, request):
+        provider = get_provider()
+        if provider.name != "gemini" or not provider.is_configured():
+            return Response(
+                {
+                    "error": {
+                        "code": "provider_not_configured",
+                        "message": (
+                            "Aktifkan Gemini untuk rekomendasi "
+                            "Digital Wardrobe."
+                        ),
+                    }
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
         serializer = WardrobeRecommendationRequestSerializer(
             data=request.data
         )
         serializer.is_valid(raise_exception=True)
 
-        items = WardrobeItem.objects.filter(
-            owner=request.user
-        ).order_by("-created_at")
+        tops = list(
+            WardrobeItem.objects.filter(
+                owner=request.user,
+                category="top",
+            ).order_by("-created_at")[:6]
+        )
+        bottoms = list(
+            WardrobeItem.objects.filter(
+                owner=request.user,
+                category="bottom",
+            ).order_by("-created_at")[:6]
+        )
 
-        if not items.exists():
+        if not tops or not bottoms:
             return Response(
                 {
                     "error": {
-                        "code": "empty_wardrobe",
+                        "code": "incomplete_wardrobe",
                         "message": (
-                            "Digital Wardrobe masih kosong. "
-                            "Tambahkan pakaian terlebih dahulu."
+                            "Tambahkan minimal satu atasan "
+                            "dan satu bawahan."
                         ),
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        wardrobe_data = WardrobeItemSerializer(
-            items,
-            many=True,
-            context=self.get_serializer_context(),
-        ).data
-
-        return Response(
+        items = tops + bottoms
+        catalog = [
             {
-                "status": "prepared",
-                "message": (
-                    "Koleksi pakaian dan preferensi berhasil disiapkan. "
-                    "Rekomendasi AI belum dijalankan."
-                ),
-                "preferences": serializer.validated_data,
-                "wardrobe_items": wardrobe_data,
-                "wardrobe_count": len(wardrobe_data),
-            },
-            status=status.HTTP_200_OK,
+                "ref": f"W{index}",
+                "id": str(item.id),
+                "name": item.name,
+                "category": item.category,
+                "color": item.color,
+            }
+            for index, item in enumerate(items, start=1)
+        ]
+
+        processed = build_wardrobe_collage(items)
+
+        fields = dict(serializer.validated_data)
+        if fields["occasion"] != "other":
+            fields.pop("occasion_detail", None)
+        fields.update(
+            source="wardrobe",
+            wardrobe_snapshot=catalog,
         )
+
+        analysis = services.create_analysis(
+            request.user,
+            processed,
+            fields,
+        )
+        services.run_analysis(analysis, provider=provider)
+        analysis = self.get_queryset().get(pk=analysis.pk)
+
+        if analysis.status == AnalysisStatus.COMPLETED:
+            return Response(
+                AnalysisDetailSerializer(analysis).data,
+                status=status.HTTP_201_CREATED,
+            )
+
+        return _failure_response(analysis)
 
     @extend_schema(
         tags=["analyses"],
@@ -227,6 +322,7 @@ class AnalysisViewSet(
                 },
                 status=status.HTTP_409_CONFLICT,
             )
+
         provider = get_provider()
         try:
             services.run_analysis(analysis, provider=provider)
@@ -240,29 +336,57 @@ class AnalysisViewSet(
                 },
                 status=status.HTTP_409_CONFLICT,
             )
+
         analysis = self.get_queryset().get(pk=analysis.pk)
         if analysis.status == AnalysisStatus.COMPLETED:
             return Response(AnalysisDetailSerializer(analysis).data)
+
         return _failure_response(analysis)
 
     @extend_schema(
         tags=["analyses"],
         summary="Download the stored photo (owner only)",
-        parameters=[OpenApiParameter("variant", str, enum=["full", "thumb"], required=False)],
-        responses={(200, "image/jpeg"): OpenApiResponse(description="JPEG bytes")},
+        parameters=[
+            OpenApiParameter(
+                "variant",
+                str,
+                enum=["full", "thumb"],
+                required=False,
+            )
+        ],
+        responses={
+            (200, "image/jpeg"): OpenApiResponse(
+                description="JPEG bytes"
+            )
+        },
     )
-    @action(detail=True, methods=["get"], url_path="image", url_name="image")
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="image",
+        url_name="image",
+    )
     def image(self, request, pk=None):
         analysis = self.get_object()
-        field = analysis.thumbnail if request.query_params.get("variant") == "thumb" and analysis.thumbnail else analysis.image
+        field = (
+            analysis.thumbnail
+            if request.query_params.get("variant") == "thumb"
+            and analysis.thumbnail
+            else analysis.image
+        )
+
         if not field or not field.storage.exists(field.name):
             raise Http404
-        response = FileResponse(field.open("rb"), content_type="image/jpeg")
+
+        response = FileResponse(
+            field.open("rb"),
+            content_type="image/jpeg",
+        )
         response["Cache-Control"] = "private, max-age=3600"
         response["Content-Disposition"] = "inline"
         return response
 
-    
+
 @extend_schema_view(
     list=extend_schema(
         tags=["wardrobe"],
@@ -288,7 +412,14 @@ class AnalysisViewSet(
 )
 class WardrobeViewSet(viewsets.ModelViewSet):
     lookup_value_regex = "[0-9a-fA-F-]{36}"
-    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+    http_method_names = [
+        "get",
+        "post",
+        "patch",
+        "delete",
+        "head",
+        "options",
+    ]
 
     def get_queryset(self):
         return WardrobeItem.objects.filter(owner=self.request.user)
@@ -358,7 +489,10 @@ class WardrobeViewSet(viewsets.ModelViewSet):
                 {
                     "error": {
                         "code": "invalid_fields",
-                        "message": "Only name, category, and color can be updated.",
+                        "message": (
+                            "Only name, category, and color "
+                            "can be updated."
+                        ),
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -381,7 +515,7 @@ class WardrobeViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        # Remove stored files before deleting the database record.
+        # Hapus file gambar sebelum menghapus data pakaian.
         if instance.image:
             instance.image.delete(save=False)
         if instance.thumbnail:
@@ -399,7 +533,11 @@ class WardrobeViewSet(viewsets.ModelViewSet):
                 required=False,
             )
         ],
-        responses={(200, "image/jpeg"): OpenApiResponse(description="JPEG bytes")},
+        responses={
+            (200, "image/jpeg"): OpenApiResponse(
+                description="JPEG bytes"
+            )
+        },
     )
     @action(
         detail=True,
@@ -426,4 +564,3 @@ class WardrobeViewSet(viewsets.ModelViewSet):
         response["Cache-Control"] = "private, max-age=3600"
         response["Content-Disposition"] = "inline"
         return response
-

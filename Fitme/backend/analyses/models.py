@@ -34,6 +34,9 @@ class OutfitAnalysis(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="outfit_analyses")
 
+    source = models.CharField(max_length=12, default="upload")
+    wardrobe_snapshot = models.JSONField(default=list, blank=True)
+
     image = models.ImageField(upload_to=_image_path)
     image_width = models.PositiveIntegerField(default=0)
     image_height = models.PositiveIntegerField(default=0)
@@ -92,6 +95,7 @@ class OutfitRecommendation(models.Model):
     primary_recommendation = models.TextField()
     color_suggestions = models.JSONField(default=list)
     alternative_outfits = models.JSONField(default=list)
+    outfits = models.JSONField(default=list)
     occasion_rationale = models.TextField()
     limitations = models.JSONField(default=list)
 

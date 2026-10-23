@@ -37,6 +37,10 @@ class InvalidModelOutput(ProviderError):
     code = "invalid_model_output"
     user_message = "The styling model returned an incomplete answer. Retrying usually fixes this."
 
+class WardrobeChanged(ProviderError):
+    code = "wardrobe_changed"
+    user_message = "Koleksi pakaian berubah selama analisis. Buat rekomendasi baru."
+    retryable = False
 
 @dataclass(frozen=True)
 class AnalysisRequest:

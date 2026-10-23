@@ -98,6 +98,7 @@ class AlternativeOutfitSerializer(serializers.Serializer):
 
 
 class RecommendationSerializer(serializers.ModelSerializer):
+    outfits = serializers.JSONField(read_only=True)
     clothing_items = ClothingItemSerializer(many=True)
     dominant_colors = ColorSerializer(many=True)
     styling_observations = serializers.ListField(child=serializers.CharField())

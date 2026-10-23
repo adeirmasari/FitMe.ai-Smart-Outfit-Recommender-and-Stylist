@@ -16,6 +16,10 @@ class _UnconfiguredProvider(VisionProvider):
 
 def get_provider() -> VisionProvider:
     choice = settings.AI_PROVIDER
+    if choice == "gemini":
+        from .gemini import GeminiProvider
+
+        return GeminiProvider()
     if choice == "qwen":
         from .qwen import QwenVLProvider
 

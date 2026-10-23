@@ -14,7 +14,7 @@ import {
 } from "../validation.js";
 
 const STAGES = [
-  [0, "Sending your photo to Qwen2.5-VL…"],
+  [0, "Mengirim koleksi ke Gemini…"],
   [6000, "Reading the garments and colours…"],
   [16000, "Matching suggestions to the occasion…"],
   [35000, "Still working — larger models can take up to a minute."],
@@ -154,7 +154,7 @@ function textField({ id, label, hint, multiline = false, value = "" }) {
     wardrobeGrid.replaceChildren();
 
     try {
-      const response = await request("/api/wardrobe/");
+      const response = await request("/api/wardrobe/?page_size=50");
       const items = Array.isArray(response)
         ? response
         : response.results || [];

@@ -177,3 +177,76 @@ def normalize_result(raw):
 
 def parse_model_text(text):
     return normalize_result(extract_json(text))
+
+def normalize_wardrobe_result(raw, catalog):
+    """Ubah label W1/W2 dari Gemini menjadi UUID pakaian yang sah."""
+    if not isinstance(raw, dict) or not isinstance(raw.get("outfits"), list):
+        raise InvalidModelOutput("missing outfits array")
+
+    by_ref = {item["ref"]: item for item in catalog}
+    tops = [item for item in catalog if item["category"] == "top"]
+    bottoms = [item for item in catalog if item["category"] == "bottom"]
+    needed = min(2, len(tops) * len(bottoms))
+
+    if len(raw["outfits"]) != needed:
+        raise InvalidModelOutput(f"expected {needed} distinct outfit(s)")
+
+    outfits = []
+    seen = set()
+
+    for index, entry in enumerate(raw["outfits"], start=1):
+        if not isinstance(entry, dict):
+            raise InvalidModelOutput("outfit entry is not an object")
+
+        top = by_ref.get(str(entry.get("top_ref", "")).strip())
+        bottom = by_ref.get(str(entry.get("bottom_ref", "")).strip())
+        reason = _clean(entry.get("reason"), 600)
+
+        if (
+            not top
+            or top["category"] != "top"
+            or not bottom
+            or bottom["category"] != "bottom"
+        ):
+            raise InvalidModelOutput(
+                "outfit references do not match an owned top and bottom"
+            )
+
+        pair = (top["id"], bottom["id"])
+        if pair in seen or not reason:
+            raise InvalidModelOutput(
+                "outfit pair repeated or missing reason"
+            )
+        seen.add(pair)
+
+        outfits.append({
+            "title": _clean(entry.get("title"), 100) or f"Outfit {index}",
+            "reason": reason,
+            "top_id": top["id"],
+            "bottom_id": bottom["id"],
+            "items": [
+                {
+                    "wardrobe_item_id": item["id"],
+                    "category": item["category"],
+                    "name": item["name"],
+                    "color": item["color"],
+                }
+                for item in (top, bottom)
+            ],
+        })
+
+    return {
+        "schema_version": 2,
+        "visual_analysis": (
+            "Rekomendasi berdasarkan foto koleksi Digital Wardrobe."
+        ),
+        "clothing_items": [],
+        "dominant_colors": [],
+        "styling_observations": [],
+        "primary_recommendation": outfits[0]["reason"],
+        "color_suggestions": [],
+        "alternative_outfits": [],
+        "outfits": outfits,
+        "occasion_rationale": outfits[0]["reason"],
+        "limitations": [],
+    }
