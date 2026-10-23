@@ -1232,7 +1232,7 @@ export async function renderAnalyze(ctx) {
           {},
           providerReady && !provider.is_mock
             ? `Analysis by ${provider.model}.`
-            : "Upload a photo and describe the occasion.",
+            : "Upload a photo or use your Digital Wardrobe, then tell us the occasion.",
         ),
       ),
       h(

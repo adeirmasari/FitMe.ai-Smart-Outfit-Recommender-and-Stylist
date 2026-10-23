@@ -233,6 +233,12 @@
                 Masuk menggunakan akun administrator untuk mengakses dashboard FitMe.ai.
             </p>
 
+            {% if error %}
+                <div class="error-message" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
             {% if form.errors %}
                 <div class="error-message" role="alert">
                     Username atau password salah, atau akun tidak dapat digunakan untuk login.
@@ -254,18 +260,18 @@
                 {% endif %}
 
                 <div class="field">
-                    <label for="{{ form.username.id_for_label }}">
+                    <label for="id_username">
                         Username
                     </label>
 
                     <input
                         type="text"
-                        name="{{ form.username.html_name }}"
-                        id="{{ form.username.id_for_label }}"
+                        name="username"
+                        id="id_username"
                         placeholder="Masukkan username"
                         autocomplete="username"
                         maxlength="150"
-                        value="{{ form.username.value|default_if_none:'' }}"
+                        value="{{ request.POST.username|default_if_none:'' }}"
                         required
                         autofocus
                     >
@@ -278,18 +284,20 @@
                 </div>
 
                 <div class="field">
-                    <label for="{{ form.password.id_for_label }}">
+                    
+                    <label for="id_password">
                         Password
                     </label>
 
                     <input
                         type="password"
-                        name="{{ form.password.html_name }}"
-                        id="{{ form.password.id_for_label }}"
+                        name="password"
+                        id="id_password"
                         placeholder="Masukkan password"
                         autocomplete="current-password"
                         required
                     >
+
 
                     {% if form.password.errors %}
                         <div class="field-error">
