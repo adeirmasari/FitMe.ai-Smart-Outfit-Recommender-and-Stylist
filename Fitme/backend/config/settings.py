@@ -182,6 +182,14 @@ QWEN = {
     "MAX_RETRIES": env_int("QWEN_MAX_RETRIES", 1),
 }
 
+GEMINI = {
+    "API_KEY": env("GEMINI_API_KEY", ""),
+    "MODEL": env("GEMINI_MODEL", "gemini-2.5-flash"),
+    "TIMEOUT_SECONDS": env_float("GEMINI_TIMEOUT_SECONDS", 90.0),
+    "CONNECT_TIMEOUT_SECONDS": env_float("GEMINI_CONNECT_TIMEOUT_SECONDS", 10.0),
+    "MAX_RETRIES": env_int("GEMINI_MAX_RETRIES", 1),
+}
+
 # --- REST framework / auth -----------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework_simplejwt.authentication.JWTAuthentication"],
