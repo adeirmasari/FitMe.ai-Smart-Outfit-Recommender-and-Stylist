@@ -64,6 +64,8 @@ export function validateBrief({ file, fileError, occasion, fields, source = "upl
   }
 
   for (const [key, limit] of Object.entries(TEXT_LIMITS)) {
+    // Detail acara hanya dipakai (dan divalidasi) saat memilih "Other".
+    if (key === "occasion_detail" && occasion !== "other") continue;
     const value = (fields?.[key] || "").trim();
     if (value.length > limit) {
       errors[key] = `Keep this under ${limit} characters.`;

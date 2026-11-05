@@ -42,6 +42,29 @@ class WardrobeChanged(ProviderError):
     user_message = "Koleksi pakaian berubah selama analisis. Buat rekomendasi baru."
     retryable = False
 
+
+class ImageNotClothing(ProviderError):
+    """Model melihat gambar yang bukan pakaian. Bukan kegagalan teknis, jadi tidak bisa dicoba ulang."""
+
+    code = "image_not_clothing"
+    user_message = "Foto ditolak karena tidak terdeteksi sebagai pakaian."
+    guidance = (
+        "Ganti dengan foto yang menampilkan pakaian secara jelas, misalnya atasan, bawahan, "
+        "sepatu, atau outfit yang sedang dipakai, dengan pencahayaan cukup dan tidak terpotong."
+    )
+    retryable = False
+
+    def __init__(self, reason=""):
+        super().__init__(reason or "image does not show clothing")
+        self.reason = reason or ""
+
+
+@dataclass(frozen=True)
+class ClothingCheck:
+    is_clothing: bool
+    reason: str = ""
+
+
 @dataclass(frozen=True)
 class AnalysisRequest:
     image_bytes: bytes  # already validated, re-encoded and downscaled JPEG
@@ -73,3 +96,11 @@ class VisionProvider:
 
     def analyze(self, request: AnalysisRequest) -> ProviderResult:
         raise NotImplementedError
+
+    def check_clothing(self, image_bytes: bytes):
+        """Periksa apakah gambar berisi pakaian.
+
+        Mengembalikan `ClothingCheck`, atau None jika provider tidak bisa
+        memeriksa isi gambar (misalnya mock), sehingga pemeriksaan dilewati.
+        """
+        return None

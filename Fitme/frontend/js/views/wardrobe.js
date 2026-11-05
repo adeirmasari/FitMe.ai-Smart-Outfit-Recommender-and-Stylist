@@ -53,30 +53,46 @@ function makeForm(item = null) {
     makeField("Warna (opsional)", color),
   );
 
+  let image = null;
+  let imageError = null;
+
   if (!item) {
-    const image = el("input", {
+    image = el("input", {
       type: "file",
       name: "image",
       accept: "image/jpeg,image/png,image/webp",
       required: true,
+      "aria-describedby": "wardrobe-image-error",
     });
-    form.append(makeField("Foto pakaian", image));
+    imageError = el("div", {
+      id: "wardrobe-image-error",
+      class: "error-text",
+      role: "alert",
+      hidden: true,
+    });
+    form.append(makeField("Foto pakaian", image), imageError);
     form.append(
       el(
         "p",
         { class: "muted small" },
-        "Gunakan foto JPG, PNG, atau WebP. Batas ukuran mengikuti validasi backend.",
+        "Gunakan foto JPG, PNG, atau WebP yang menampilkan pakaian dengan jelas. Foto yang bukan pakaian akan ditolak.",
       ),
     );
+    // Pesan penolakan hilang begitu pengguna memilih foto pengganti.
+    image.addEventListener("change", () => {
+      imageError.hidden = true;
+      clear(imageError);
+      image.removeAttribute("aria-invalid");
+    });
   }
 
-  return { form, name, category, color };
+  return { form, name, category, color, image, imageError };
 }
 
 function dialogFor(item = null) {
   const dialog = el("dialog", { class: "wardrobe-dialog" });
   const heading = el("h2", {}, item ? "Edit pakaian" : "Tambah pakaian");
-  const { form, name, category, color } = makeForm(item);
+  const { form, name, category, color, image, imageError } = makeForm(item);
   const cancel = el("button", { class: "btn btn-ghost", type: "button" }, "Batal");
   const submit = el("button", { class: "btn", type: "submit" }, item ? "Simpan perubahan" : "Upload pakaian");
   const actions = el("div", { class: "wardrobe-form-actions" }, cancel, submit);
@@ -88,7 +104,7 @@ function dialogFor(item = null) {
   cancel.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => dialog.remove());
 
-  return { dialog, form, name, category, color, submit };
+  return { dialog, form, name, category, color, submit, image, imageError };
 }
 
 function formatDate(value) {
@@ -255,7 +271,17 @@ export async function renderWardrobe(ctx) {
   }
 
   async function addItem() {
-    const { dialog, form, name, category, color, submit } = dialogFor();
+    const { dialog, form, name, category, color, submit, image, imageError } = dialogFor();
+
+    function showImageProblem(...lines) {
+      clear(imageError);
+      imageError.append(...lines.filter(Boolean));
+      imageError.hidden = false;
+      image.setAttribute("aria-invalid", "true");
+      image.value = "";
+      image.focus();
+    }
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
@@ -270,7 +296,7 @@ export async function renderWardrobe(ctx) {
       formData.append("image", file);
 
       submit.disabled = true;
-      submit.textContent = "Mengunggah…";
+      submit.textContent = "Memeriksa foto…";
       try {
         await upload(API, formData);
         if (disposed) return;
@@ -278,7 +304,23 @@ export async function renderWardrobe(ctx) {
         toast("Pakaian berhasil ditambahkan.");
         await refresh();
       } catch (error) {
-        toast(error.message || "Upload gagal.", { error: true });
+        if (error.code === "image_not_clothing") {
+          // Ditolak sebelum disimpan: tidak masuk koleksi.
+          const info = error.data?.error || {};
+          showImageProblem(
+            el("strong", { style: { display: "block" } }, error.message),
+            info.reason ? el("span", { style: { display: "block" } }, `Alasan: ${info.reason}`) : null,
+            el(
+              "span",
+              { style: { display: "block" } },
+              info.guidance || "Ganti dengan foto yang menampilkan pakaian secara jelas.",
+            ),
+          );
+        } else if (error.fields?.image) {
+          showImageProblem(el("span", {}, [].concat(error.fields.image).join(" ")));
+        } else {
+          toast(error.message || "Upload gagal.", { error: true });
+        }
       } finally {
         if (submit.isConnected) {
           submit.disabled = false;

@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from ai_services.base import (
     AnalysisRequest,
+    ImageNotClothing,
     InvalidModelOutput,
     ProviderNotConfigured,
     ProviderRejected,
@@ -17,7 +18,7 @@ from ai_services.dataset import target_keywords
 from ai_services.mock import MockVisionProvider
 from ai_services.prompts import build_user_prompt
 from ai_services.qwen import QwenVLProvider
-from ai_services.schema import extract_json, normalize_result, parse_model_text
+from ai_services.schema import extract_json, normalize_result, parse_clothing_check, parse_model_text
 from analyses.tests.helpers import VALID_RESULT, image_bytes
 
 CONFIG = {
@@ -97,6 +98,28 @@ class PromptTests(SimpleTestCase):
         self.assertLess(len(prompt), 600)
 
 
+class ClothingDetectionTests(SimpleTestCase):
+    def test_not_clothing_flag_raises_with_reason(self):
+        for flag in (False, "false", "tidak"):
+            with self.assertRaises(ImageNotClothing) as ctx:
+                normalize_result({"is_clothing": flag, "rejection_reason": "Foto menampilkan seekor kucing."})
+            self.assertEqual(ctx.exception.reason, "Foto menampilkan seekor kucing.")
+            self.assertFalse(ctx.exception.retryable)
+
+    def test_clothing_flag_true_or_missing_is_normal_result(self):
+        self.assertTrue(normalize_result({**VALID_RESULT, "is_clothing": True})["primary_recommendation"])
+        self.assertTrue(normalize_result(VALID_RESULT)["primary_recommendation"])
+
+    def test_parse_clothing_check(self):
+        ok = parse_clothing_check('{"is_clothing": true, "reason": ""}')
+        self.assertTrue(ok.is_clothing)
+        bad = parse_clothing_check('{"is_clothing": false, "reason": "Foto berisi pemandangan pantai."}')
+        self.assertFalse(bad.is_clothing)
+        self.assertEqual(bad.reason, "Foto berisi pemandangan pantai.")
+        with self.assertRaises(InvalidModelOutput):
+            parse_clothing_check('{"answer": "maybe"}')
+
+
 class QwenProviderTests(SimpleTestCase):
     def provider(self, *responses):
         session = mock.Mock()
@@ -164,6 +187,21 @@ class QwenProviderTests(SimpleTestCase):
             provider, _ = self.provider(res)
             with self.assertRaises(InvalidModelOutput):
                 provider.analyze(make_request())
+
+    def test_not_clothing_answer_raises(self):
+        body = completion(json.dumps({"is_clothing": False, "rejection_reason": "Foto berisi makanan."}))
+        provider, _ = self.provider(http_response(body=body))
+        with self.assertRaises(ImageNotClothing):
+            provider.analyze(make_request())
+
+    def test_check_clothing(self):
+        body = completion(json.dumps({"is_clothing": False, "reason": "Foto berisi mobil."}))
+        provider, session = self.provider(http_response(body=body))
+        result = provider.check_clothing(image_bytes())
+        self.assertFalse(result.is_clothing)
+        self.assertEqual(result.reason, "Foto berisi mobil.")
+        payload = session.post.call_args.kwargs["json"]
+        self.assertIn("digital wardrobe", payload["messages"][0]["content"])
 
     def test_unconfigured(self):
         provider = QwenVLProvider(config={**CONFIG, "API_BASE": ""}, session=mock.Mock())

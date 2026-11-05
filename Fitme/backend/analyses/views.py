@@ -1,3 +1,5 @@
+import logging
+
 from django.http import FileResponse, Http404
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -11,6 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 
+from ai_services.base import ImageNotClothing, ProviderError
 from ai_services.providers import get_provider
 
 from . import services
@@ -27,8 +30,13 @@ from .serializers import (
     WardrobeItemSerializer,
     WardrobeRecommendationRequestSerializer,
 )
+from .imaging import model_input
 from .wardrobe_collage import build_wardrobe_collage
 
+logger = logging.getLogger(__name__)
+
+# 422: gambar valid secara teknis, tetapi isinya bukan pakaian.
+HTTP_422_NOT_CLOTHING = 422
 
 FailedAnalysisResponse = inline_serializer(
     "FailedAnalysisResponse",
@@ -38,11 +46,30 @@ FailedAnalysisResponse = inline_serializer(
             {
                 "code": serializers.CharField(),
                 "message": serializers.CharField(),
+                "reason": serializers.CharField(required=False),
+                "guidance": serializers.CharField(required=False),
             },
         ),
         "analysis": AnalysisDetailSerializer(),
     },
 )
+
+
+def _not_clothing_body(reason=""):
+    """Envelope error untuk gambar yang bukan pakaian (dipakai Analyze dan Wardrobe)."""
+    reason = (reason or "").strip()
+    field_message = ImageNotClothing.user_message
+    if reason:
+        field_message = f"{field_message} {reason}"
+    return {
+        "error": {
+            "code": ImageNotClothing.code,
+            "message": ImageNotClothing.user_message,
+            "reason": reason,
+            "guidance": ImageNotClothing.guidance,
+            "fields": {"image": [field_message]},
+        }
+    }
 
 
 def _failure_response(analysis):
@@ -52,14 +79,20 @@ def _failure_response(analysis):
         if analysis.error_code == "provider_not_configured"
         else status.HTTP_504_GATEWAY_TIMEOUT
         if analysis.error_code == "provider_timeout"
+        else HTTP_422_NOT_CLOTHING
+        if analysis.error_code == ImageNotClothing.code
         else status.HTTP_502_BAD_GATEWAY
     )
+    error = {
+        "code": info["code"],
+        "message": info["message"],
+    }
+    if analysis.error_code == ImageNotClothing.code:
+        error["reason"] = getattr(analysis, "rejection_reason", "")
+        error["guidance"] = ImageNotClothing.guidance
     return Response(
         {
-            "error": {
-                "code": info["code"],
-                "message": info["message"],
-            },
+            "error": error,
             "analysis": AnalysisDetailSerializer(analysis).data,
         },
         status=http_status,
@@ -116,6 +149,9 @@ class AnalysisViewSet(
             201: AnalysisDetailSerializer,
             400: OpenApiResponse(
                 description="Validation error (image, occasion or text fields)"
+            ),
+            422: OpenApiResponse(
+                description="Image is not clothing; nothing is stored"
             ),
             502: FailedAnalysisResponse,
             503: OpenApiResponse(
@@ -178,7 +214,18 @@ class AnalysisViewSet(
             processed_image,
             fields,
         )
-        services.run_analysis(analysis, provider=provider)
+        analysis = services.run_analysis(analysis, provider=provider)
+
+        if analysis.error_code == ImageNotClothing.code:
+            # Gambar bukan pakaian: tidak disimpan ke riwayat dan tidak
+            # ditampilkan sebagai analisis. Foto ikut terhapus lewat signal.
+            reason = getattr(analysis, "rejection_reason", "")
+            analysis.delete()
+            return Response(
+                _not_clothing_body(reason),
+                status=HTTP_422_NOT_CLOTHING,
+            )
+
         analysis = self.get_queryset().get(pk=analysis.pk)
 
         if analysis.status == AnalysisStatus.COMPLETED:
@@ -325,7 +372,7 @@ class AnalysisViewSet(
 
         provider = get_provider()
         try:
-            services.run_analysis(analysis, provider=provider)
+            analysis = services.run_analysis(analysis, provider=provider)
         except services.AnalysisConflict as exc:
             return Response(
                 {
@@ -337,10 +384,12 @@ class AnalysisViewSet(
                 status=status.HTTP_409_CONFLICT,
             )
 
+        reason = getattr(analysis, "rejection_reason", "")
         analysis = self.get_queryset().get(pk=analysis.pk)
         if analysis.status == AnalysisStatus.COMPLETED:
             return Response(AnalysisDetailSerializer(analysis).data)
 
+        analysis.rejection_reason = reason
         return _failure_response(analysis)
 
     @extend_schema(
@@ -387,6 +436,47 @@ class AnalysisViewSet(
         return response
 
 
+def _check_wardrobe_image(jpeg_bytes):
+    """Tolak foto bukan pakaian sebelum disimpan ke Digital Wardrobe.
+
+    Mengembalikan Response error bila foto ditolak atau tidak bisa diperiksa,
+    atau None bila foto boleh disimpan. Tanpa provider AI sungguhan (none/mock)
+    pemeriksaan dilewati agar Wardrobe tetap bisa dipakai saat development.
+    """
+    provider = get_provider()
+    if provider.is_mock or not provider.is_configured():
+        return None
+
+    try:
+        result = provider.check_clothing(model_input(jpeg_bytes))
+    except ImageNotClothing as exc:
+        return Response(
+            _not_clothing_body(exc.reason),
+            status=HTTP_422_NOT_CLOTHING,
+        )
+    except ProviderError as exc:
+        logger.warning("Wardrobe image check failed: %s (%s)", exc.code, exc)
+        return Response(
+            {
+                "error": {
+                    "code": "content_check_unavailable",
+                    "message": (
+                        "Foto belum bisa diperiksa karena layanan AI sedang "
+                        "bermasalah. Pakaian belum disimpan; coba lagi sebentar."
+                    ),
+                }
+            },
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    if result is not None and not result.is_clothing:
+        return Response(
+            _not_clothing_body(result.reason),
+            status=HTTP_422_NOT_CLOTHING,
+        )
+    return None
+
+
 @extend_schema_view(
     list=extend_schema(
         tags=["wardrobe"],
@@ -400,6 +490,11 @@ class AnalysisViewSet(
         tags=["wardrobe"],
         summary="Add a clothing item to your wardrobe",
         request={"multipart/form-data": WardrobeItemCreateSerializer},
+        responses={
+            201: WardrobeItemSerializer,
+            422: OpenApiResponse(description="Image is not clothing; nothing is stored"),
+            503: OpenApiResponse(description="Image could not be checked; nothing is stored"),
+        },
     ),
     partial_update=extend_schema(
         tags=["wardrobe"],
@@ -440,6 +535,10 @@ class WardrobeViewSet(viewsets.ModelViewSet):
 
         processed = serializer.context["processed_image"]
         data = serializer.validated_data
+
+        rejection = _check_wardrobe_image(processed.full)
+        if rejection is not None:
+            return rejection
 
         item = WardrobeItem(
             owner=request.user,

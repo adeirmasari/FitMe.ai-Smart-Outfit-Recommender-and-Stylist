@@ -53,3 +53,32 @@ test("normalizeError uses server envelope or a status fallback", () => {
   assert.match(normalizeError(504, "<html>").message, /too long/);
   assert.match(normalizeError(418, null).message, /Something went wrong/);
 });
+
+test("missing photo is reported on the image field", () => {
+  const { valid, errors } = validateBrief({ file: null, occasion: "work", fields: {} });
+  assert.equal(valid, false);
+  assert.match(errors.image, /Choose a photo/);
+  // Wardrobe source does not need an uploaded photo.
+  assert.equal(validateBrief({ file: null, occasion: "work", fields: {}, source: "wardrobe" }).errors.image, undefined);
+});
+
+test("occasion detail is only validated for Other", () => {
+  const long = { occasion_detail: "x".repeat(81) };
+  assert.ok(validateBrief({ file: file("a.jpg", "image/jpeg"), occasion: "other", fields: long }).errors.occasion_detail);
+  assert.deepEqual(validateBrief({ file: file("a.jpg", "image/jpeg"), occasion: "party", fields: long }), { valid: true, errors: {} });
+});
+
+test("not-clothing rejection keeps reason and image field message", () => {
+  const e = normalizeError(422, {
+    error: {
+      code: "image_not_clothing",
+      message: "Foto ditolak karena tidak terdeteksi sebagai pakaian.",
+      reason: "Foto menampilkan sepiring nasi goreng.",
+      guidance: "Ganti dengan foto pakaian.",
+      fields: { image: ["Foto ditolak karena tidak terdeteksi sebagai pakaian. Foto menampilkan sepiring nasi goreng."] },
+    },
+  });
+  assert.equal(e.code, "image_not_clothing");
+  assert.equal(e.data.error.reason, "Foto menampilkan sepiring nasi goreng.");
+  assert.ok(e.fields.image);
+});

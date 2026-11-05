@@ -8,9 +8,9 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
 
-from ai_services.base import InvalidModelOutput, ProviderTimeout, ProviderUnavailable
+from ai_services.base import ClothingCheck, ImageNotClothing, InvalidModelOutput, ProviderTimeout, ProviderUnavailable
 from ai_services.providers import _UnconfiguredProvider
-from analyses.models import AnalysisStatus, OutfitAnalysis, OutfitRecommendation
+from analyses.models import AnalysisStatus, OutfitAnalysis, OutfitRecommendation, WardrobeItem
 
 from .helpers import FakeProvider, FitMeTestCase, image_bytes, upload
 
@@ -200,6 +200,33 @@ class ProviderFailureTests(FitMeTestCase):
         self.assertEqual(res.status_code, 502)
         self.assertEqual(OutfitAnalysis.objects.get().error_code, "internal_error")
 
+    def test_not_clothing_is_rejected_and_not_stored(self):
+        with patch_provider(FakeProvider(error=ImageNotClothing("Foto menampilkan sepiring makanan."))):
+            res = self.post()
+        self.assertEqual(res.status_code, 422)
+        err = res.data["error"]
+        self.assertEqual(err["code"], "image_not_clothing")
+        self.assertEqual(err["reason"], "Foto menampilkan sepiring makanan.")
+        self.assertTrue(err["guidance"])
+        self.assertIn("image", err["fields"])
+        self.assertNotIn("analysis", res.data)
+        self.assertEqual(OutfitAnalysis.objects.count(), 0)
+        self.assertEqual(OutfitRecommendation.objects.count(), 0)
+        self.assertEqual([f for _, _, files in os.walk(self._media) for f in files], [])
+
+    def test_retry_that_detects_not_clothing_stays_failed_and_not_retryable(self):
+        with patch_provider(FakeProvider(error=ProviderUnavailable("down"))):
+            pk = self.post().data["analysis"]["id"]
+        with patch_provider(FakeProvider(error=ImageNotClothing("Foto berisi kucing."))):
+            res = self.client.post(reverse("analysis-retry", args=[pk]))
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(res.data["error"]["reason"], "Foto berisi kucing.")
+        analysis = res.data["analysis"]
+        self.assertEqual(analysis["status"], "failed")
+        self.assertIsNone(analysis["recommendation"])
+        self.assertEqual(analysis["error"]["code"], "image_not_clothing")
+        self.assertFalse(analysis["error"]["retryable"])
+
     def test_retry_after_failure_then_completed(self):
         with patch_provider(FakeProvider(error=ProviderUnavailable("down"))):
             res = self.post()
@@ -294,3 +321,47 @@ class HistoryAndPermissionTests(FitMeTestCase):
 
     def test_unknown_id_is_404(self):
         self.assertEqual(self.client.get(detail("00000000-0000-0000-0000-000000000000")).status_code, 404)
+
+
+WARDROBE = reverse("wardrobe-list")
+
+
+class WardrobeUploadCheckTests(FitMeTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = self.make_user()
+        self.login(self.user)
+
+    def post(self, provider):
+        with mock.patch("analyses.views.get_provider", return_value=provider):
+            return self.client.post(
+                WARDROBE,
+                {"name": "Kemeja putih", "category": "top", "image": upload()},
+                format="multipart",
+            )
+
+    def test_clothing_is_saved(self):
+        provider = FakeProvider(clothing_check=ClothingCheck(is_clothing=True))
+        res = self.post(provider)
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(provider.check_calls, 1)
+        self.assertEqual(WardrobeItem.objects.count(), 1)
+
+    def test_not_clothing_is_rejected_before_saving(self):
+        provider = FakeProvider(clothing_check=ClothingCheck(is_clothing=False, reason="Foto berisi laptop."))
+        res = self.post(provider)
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(res.data["error"]["code"], "image_not_clothing")
+        self.assertEqual(res.data["error"]["reason"], "Foto berisi laptop.")
+        self.assertEqual(WardrobeItem.objects.count(), 0)
+        self.assertEqual([f for _, _, files in os.walk(self._media) for f in files], [])
+
+    def test_check_failure_saves_nothing(self):
+        res = self.post(FakeProvider(check_error=ProviderTimeout("slow")))
+        self.assertEqual(res.status_code, 503)
+        self.assertEqual(res.data["error"]["code"], "content_check_unavailable")
+        self.assertEqual(WardrobeItem.objects.count(), 0)
+
+    def test_without_ai_provider_check_is_skipped(self):
+        res = self.post(_UnconfiguredProvider())
+        self.assertEqual(res.status_code, 201, res.data)

@@ -14,6 +14,15 @@ from .services import error_info
 
 
 
+def _keep_detail_only_for_other(attrs):
+    """Detail acara hanya dipakai saat acara "Other"; selain itu diabaikan."""
+    if attrs.get("occasion") == Occasion.OTHER:
+        attrs["occasion_detail"] = (attrs.get("occasion_detail") or "").strip()
+    else:
+        attrs.pop("occasion_detail", None)
+    return attrs
+
+
 class AnalysisCreateSerializer(serializers.Serializer):
     image = serializers.FileField(
         required=False,
@@ -30,7 +39,12 @@ class AnalysisCreateSerializer(serializers.Serializer):
         image = attrs.get("image")
         wardrobe_item_id = attrs.get("wardrobe_item_id")
 
-        if bool(image) == bool(wardrobe_item_id):
+        if image is None and wardrobe_item_id is None:
+            raise serializers.ValidationError(
+                {"image": "This field is required unless you select a wardrobe item."}
+            )
+
+        if image and wardrobe_item_id:
             raise serializers.ValidationError(
                 "Provide either an uploaded image or a wardrobe item, but not both."
             )
@@ -41,7 +55,7 @@ class AnalysisCreateSerializer(serializers.Serializer):
             except ImageRejected as exc:
                 raise serializers.ValidationError({"image": str(exc)}) from exc
 
-        return attrs
+        return _keep_detail_only_for_other(attrs)
 
 
 class WardrobeRecommendationRequestSerializer(serializers.Serializer):
@@ -67,11 +81,15 @@ class WardrobeRecommendationRequestSerializer(serializers.Serializer):
         allow_blank=True,
     )
 
+    def validate(self, attrs):
+        return _keep_detail_only_for_other(attrs)
+
 
 class ErrorInfoSerializer(serializers.Serializer):
     code = serializers.CharField()
     message = serializers.CharField()
     retryable = serializers.BooleanField()
+    guidance = serializers.CharField(required=False)
 
 
 class ClothingItemSerializer(serializers.Serializer):

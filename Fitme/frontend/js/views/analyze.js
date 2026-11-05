@@ -139,7 +139,6 @@ export async function renderAnalyze(ctx) {
   const provider = health?.ai_provider;
   const providerReady = Boolean(provider?.configured);
 
-  // Pilihan sumber pakaian
   const sourceUploadBtn = h(
     "button",
     {
@@ -229,8 +228,11 @@ export async function renderAnalyze(ctx) {
         return;
       }
 
-      wardrobeStatus.textContent =
-        `${items.length} item pakaian tersimpan.`;
+      const hasTop = items.some((item) => item.category === "top");
+      const hasBottom = items.some((item) => item.category === "bottom");
+      wardrobeStatus.textContent = hasTop && hasBottom
+        ? `${items.length} item pakaian tersimpan. Rekomendasi akan dibuat dari koleksi ini.`
+        : "Tambahkan minimal satu atasan dan satu bawahan di Digital Wardrobe untuk membuat rekomendasi.";
 
       const cards = await Promise.all(
         items.map(async (item) => {
@@ -317,45 +319,23 @@ export async function renderAnalyze(ctx) {
   }
 
   function switchSource(source) {
-    if (state.busy) {
-      return;
-    }
+    if (state.busy) return;
 
     state.source = source;
-
     const useUpload = source === "upload";
 
-    sourceUploadBtn.classList.toggle(
-      "btn-accent",
-      useUpload,
-    );
-    sourceWardrobeBtn.classList.toggle(
-      "btn-accent",
-      !useUpload,
-    );
-
-    sourceUploadBtn.setAttribute(
-      "aria-pressed",
-      String(useUpload),
-    );
-    sourceWardrobeBtn.setAttribute(
-      "aria-pressed",
-      String(!useUpload),
-    );
+    sourceUploadBtn.classList.toggle("btn-accent", useUpload);
+    sourceWardrobeBtn.classList.toggle("btn-accent", !useUpload);
+    sourceUploadBtn.setAttribute("aria-pressed", String(useUpload));
+    sourceWardrobeBtn.setAttribute("aria-pressed", String(!useUpload));
 
     wardrobePanel.hidden = useUpload;
     dropzone.hidden = !useUpload || Boolean(state.file);
     preview.hidden = !useUpload || !state.file;
     imageError.hidden = !useUpload || !state.fileError;
 
-    if (samplesBlock) {
-      samplesBlock.hidden = !useUpload;
-    }
-
-    if (!useUpload) {
-      loadWardrobe();
-    }
-
+    if (samplesBlock) samplesBlock.hidden = !useUpload;
+    if (!useUpload) loadWardrobe();
     updateSubmit();
   }
 
@@ -384,6 +364,7 @@ export async function renderAnalyze(ctx) {
     id: "photo-error",
     class: "error-text",
     role: "alert",
+    hidden: true,
   });
 
   const hasCamera =
@@ -561,8 +542,7 @@ export async function renderAnalyze(ctx) {
       );
     });
 
-    imageError.textContent = "";
-    dropzone.classList.remove("invalid");
+    clearImageError();
 
     if (!file) {
       preview.hidden = true;
@@ -608,13 +588,62 @@ export async function renderAnalyze(ctx) {
     updateSubmit();
   }
 
-  function showImageError(message) {
-    imageError.textContent = message;
+  function clearImageError() {
+    imageError.replaceChildren();
+    imageError.hidden = true;
+    dropzone.classList.remove("invalid");
+    dropzone.removeAttribute("aria-invalid");
+  }
+
+  /** Pesan error selalu tampil di kolom foto, tepat di bawah dropzone. */
+  function showImageError(message, { focus = false } = {}) {
+    imageError.replaceChildren(message);
+    revealImageError(focus);
+  }
+
+  /** Foto ditolak karena isinya bukan pakaian: tampilkan alasan dan arahan ganti foto. */
+  function showImageRejection({ message, reason, guidance }) {
+    revokePreview();
+    state.file = null;
+    state.fileError = message || "Foto ditolak karena tidak terdeteksi sebagai pakaian.";
+    state.sampleKey = null;
+    sampleButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
+    previewImg.removeAttribute("src");
+
+    imageError.replaceChildren(
+      h("strong", { style: { display: "block" } }, message || "Foto ditolak karena tidak terdeteksi sebagai pakaian."),
+      reason ? h("span", { style: { display: "block" } }, `Alasan: ${reason}`) : null,
+      h(
+        "span",
+        { style: { display: "block", marginTop: "var(--space-2)" } },
+        guidance || "Ganti dengan foto yang menampilkan pakaian atau outfit secara jelas.",
+      ),
+      h(
+        "button",
+        {
+          type: "button",
+          class: "btn",
+          style: { marginTop: "var(--space-3)" },
+          onclick: () => fileInput.click(),
+        },
+        "Ganti foto",
+      ),
+    );
+    revealImageError(true);
+  }
+
+  function revealImageError(focus) {
+    imageError.hidden = false;
     preview.hidden = true;
     dropzone.hidden = false;
     dropzone.classList.add("invalid");
+    dropzone.setAttribute("aria-invalid", "true");
     fileInput.value = "";
     updateSubmit();
+    if (focus) {
+      imageError.scrollIntoView({ behavior: "smooth", block: "center" });
+      chooseBtn.focus({ preventScroll: true });
+    }
   }
 
   async function useSample(sample, btn) {
@@ -754,7 +783,7 @@ export async function renderAnalyze(ctx) {
       type: "submit",
       class: "btn btn-accent",
     },
-    "Analyze outfit",
+    "Generate recommendation",
   );
 
   const progressFill = h("div", {
@@ -837,9 +866,11 @@ export async function renderAnalyze(ctx) {
 
   form.addEventListener("change", (event) => {
     if (event.target.name === "occasion") {
+      const isOther = event.target.value === "other";
       occasionError.textContent = "";
-      occasionDetail.wrap.hidden =
-        event.target.value !== "other";
+      occasionDetail.wrap.hidden = !isOther;
+      // Detail hanya berlaku untuk "Other"; error lama tidak relevan lagi.
+      if (!isOther) occasionDetail.setError("");
       updateSubmit();
     }
   });
@@ -854,12 +885,18 @@ export async function renderAnalyze(ctx) {
 
   function updateSubmit() {
     const missing = [];
+    let wardrobeNotReady = false;
 
     if (state.source === "wardrobe") {
       if (state.wardrobeLoading) {
         missing.push("wardrobe loading to finish");
-      } else if (!state.wardrobeItems.length) {
-        missing.push("at least one wardrobe item");
+        wardrobeNotReady = true;
+      } else if (
+        !state.wardrobeItems.some((item) => item.category === "top") ||
+        !state.wardrobeItems.some((item) => item.category === "bottom")
+      ) {
+        missing.push("at least one top and one bottom in Wardrobe");
+        wardrobeNotReady = true;
       }
     } else if (!state.file) {
       missing.push("a photo");
@@ -876,10 +913,12 @@ export async function renderAnalyze(ctx) {
         provider?.name !== "gemini"
       );
 
+    // Foto atau acara yang belum dipilih tidak mengunci tombol: saat
+    // ditekan, validasi menampilkan pesan di kolom yang bersangkutan.
     const blocked =
       providerBlocked ||
       state.busy ||
-      missing.length > 0;
+      wardrobeNotReady;
 
     submitBtn.setAttribute(
       "aria-disabled",
@@ -894,7 +933,7 @@ export async function renderAnalyze(ctx) {
           ? "Aktifkan Gemini API untuk membuat rekomendasi."
           : "AI belum tersedia untuk analisis foto."
         : missing.length
-          ? `Add ${missing.join(" and ")} to continue.`
+          ? `Lengkapi ${missing.join(" dan ")} untuk melanjutkan.`
           : "";
   }
 
@@ -937,7 +976,7 @@ export async function renderAnalyze(ctx) {
 
     if (!valid) {
       if (errors.image) {
-        showImageError(errors.image);
+        showImageError(errors.image, { focus: true });
       }
 
       if (errors.occasion) {
@@ -954,9 +993,7 @@ export async function renderAnalyze(ctx) {
       }
 
       const fieldToFocus = errors.image
-        ? state.file
-          ? fileInput
-          : chooseBtn
+        ? chooseBtn
         : errors.occasion
           ? occasionInputs[0].querySelector("input")
           : form.querySelector("[aria-invalid=true]");
@@ -965,17 +1002,12 @@ export async function renderAnalyze(ctx) {
       return;
     }
 
-    const isWardrobe =
-      state.source === "wardrobe";
-
     const data = new FormData();
 
+    const isWardrobe = state.source === "wardrobe";
+
     if (!isWardrobe) {
-      data.append(
-        "image",
-        state.file,
-        state.file.name,
-      );
+      data.append("image", state.file, state.file.name);
     }
 
     data.append(
@@ -1026,12 +1058,10 @@ export async function renderAnalyze(ctx) {
       : "Uploading photo…";
 
     try {
-      const endpoint = isWardrobe
-        ? "/api/analyses/wardrobe-recommendation/"
-        : "/api/analyses/";
-
       const result = await upload(
-        endpoint,
+        isWardrobe
+          ? "/api/analyses/wardrobe-recommendation/"
+          : "/api/analyses/",
         data,
         {
           signal: state.controller.signal,
@@ -1040,12 +1070,9 @@ export async function renderAnalyze(ctx) {
             progressFill.style.width =
               `${Math.round(fraction * 100)}%`;
 
-            progressLabel.textContent =
-              isWardrobe
-                ? WARDROBE_UPLOAD_LABEL
-                : `Uploading photo... ${Math.round(
-                    fraction * 100,
-                  )}%`;
+            progressLabel.textContent = isWardrobe
+              ? WARDROBE_UPLOAD_LABEL
+              : `Uploading photo... ${Math.round(fraction * 100)}%`;
           },
 
           onUploaded: () => {
@@ -1054,13 +1081,9 @@ export async function renderAnalyze(ctx) {
               "indeterminate",
             );
 
-            if (isWardrobe) {
-              progressLabel.textContent =
-                "Gemini sedang menyusun kombinasi pakaian…";
-            } else {
-              progressLabel.textContent =
-                "AI sedang menganalisis foto…";
-            }
+            progressLabel.textContent = isWardrobe
+              ? "Gemini sedang menyusun kombinasi pakaian…"
+              : "AI sedang menganalisis foto…";
           },
         },
       );
@@ -1097,10 +1120,20 @@ export async function renderAnalyze(ctx) {
 
       const fieldErrors = error.fields || {};
 
-      if (fieldErrors.image) {
-        showImageError(
-          [].concat(fieldErrors.image).join(" "),
-        );
+      if (error.code === "image_not_clothing") {
+        const info = error.data?.error || {};
+        showImageRejection({
+          message: error.message,
+          reason: info.reason,
+          guidance: info.guidance,
+        });
+      } else if (fieldErrors.image) {
+        const message = [].concat(fieldErrors.image).join(" ");
+        revokePreview();
+        state.file = null;
+        state.fileError = message;
+        previewImg.removeAttribute("src");
+        showImageError(message, { focus: true });
       }
 
       if (fieldErrors.occasion) {
@@ -1139,7 +1172,7 @@ export async function renderAnalyze(ctx) {
             element.disabled = false;
           });
 
-        submitBtn.textContent = "Analyze outfit";
+        submitBtn.textContent = "Generate recommendation";
         progress.hidden = true;
         updateSubmit();
       }
@@ -1200,9 +1233,11 @@ export async function renderAnalyze(ctx) {
         {},
         "Development mock mode.",
       ),
-      "Results on this server are placeholder fixtures, not AI output. Only the dominant colours are measured from your photo.",
+      "Hasil di server ini adalah data uji, bukan rekomendasi Gemini.",
     );
   }
+
+  loadWardrobe();
 
   return h(
     "div",

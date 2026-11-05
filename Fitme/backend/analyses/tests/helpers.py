@@ -46,14 +46,23 @@ class FakeProvider(VisionProvider):
     name = "fake"
     model = "fake-qwen"
 
-    def __init__(self, result=None, error=None, on_call=None):
+    def __init__(self, result=None, error=None, on_call=None, clothing_check=None, check_error=None):
         self.result = VALID_RESULT if result is None else result
         self.error = error
         self.on_call = on_call
+        self.clothing_check = clothing_check
+        self.check_error = check_error
         self.calls = []
+        self.check_calls = 0
 
     def is_configured(self):
         return True
+
+    def check_clothing(self, image_bytes):
+        self.check_calls += 1
+        if self.check_error:
+            raise self.check_error
+        return self.clothing_check
 
     def analyze(self, request):
         self.calls.append(request)

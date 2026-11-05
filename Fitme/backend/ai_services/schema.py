@@ -9,7 +9,7 @@ import json
 import re
 import unicodedata
 
-from .base import InvalidModelOutput
+from .base import ClothingCheck, ImageNotClothing, InvalidModelOutput
 
 SCHEMA_VERSION = 1
 
@@ -152,9 +152,39 @@ def extract_json(text):
     raise InvalidModelOutput("model response was not a JSON object")
 
 
+_FALSE_WORDS = {"false", "no", "0", "tidak", "bukan"}
+_TRUE_WORDS = {"true", "yes", "1", "ya"}
+
+
+def _flag(value):
+    """Baca boolean dari model secara longgar. None berarti tidak ada/tidak jelas."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        word = value.strip().lower()
+        if word in _FALSE_WORDS:
+            return False
+        if word in _TRUE_WORDS:
+            return True
+    return None
+
+
+def _rejection_reason(raw):
+    return _clean(
+        raw.get("rejection_reason") or raw.get("reason") or raw.get("visual_analysis"),
+        MAX_SHORT * 2,
+    )
+
+
 def normalize_result(raw):
     if not isinstance(raw, dict):
         raise InvalidModelOutput("result is not an object")
+
+    # Gambar yang terdeteksi bukan pakaian ditolak, tidak disimpan sebagai analisis sukses.
+    if _flag(raw.get("is_clothing")) is False:
+        raise ImageNotClothing(_rejection_reason(raw))
 
     result = {
         "schema_version": SCHEMA_VERSION,
@@ -177,6 +207,15 @@ def normalize_result(raw):
 
 def parse_model_text(text):
     return normalize_result(extract_json(text))
+
+
+def parse_clothing_check(text):
+    """Hasil pemeriksaan isi gambar: {"is_clothing": bool, "reason": "..."}."""
+    raw = extract_json(text)
+    flag = _flag(raw.get("is_clothing"))
+    if flag is None:
+        raise InvalidModelOutput("clothing check has no is_clothing flag")
+    return ClothingCheck(is_clothing=flag, reason="" if flag else _rejection_reason(raw))
 
 def normalize_wardrobe_result(raw, catalog):
     """Ubah label W1/W2 dari Gemini menjadi UUID pakaian yang sah."""

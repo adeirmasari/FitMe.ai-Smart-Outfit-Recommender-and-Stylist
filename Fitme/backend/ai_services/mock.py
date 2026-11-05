@@ -72,7 +72,7 @@ class MockVisionProvider(VisionProvider):
             "styling_observations": ["[Development mock] Placeholder observation for UI testing."],
             "primary_recommendation": (
                 f"[Development mock] Placeholder recommendation for the '{request.occasion}' occasion. "
-                "Configure AI_PROVIDER=qwen to receive real Qwen2.5-VL styling advice."
+                "Configure AI_PROVIDER=gemini to receive real Gemini styling advice."
             ),
             "color_suggestions": [{"palette": [c["name"] for c in colors[:2]], "note": "[Development mock] Measured colours only."}],
             "alternative_outfits": [],

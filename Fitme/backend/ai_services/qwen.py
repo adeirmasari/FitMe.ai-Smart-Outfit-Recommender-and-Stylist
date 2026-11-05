@@ -15,7 +15,6 @@ import base64
 import logging
 import time
 
-from django.http import response
 import requests
 from django.conf import settings
 
@@ -28,8 +27,14 @@ from .base import (
     ProviderUnavailable,
     VisionProvider,
 )
-from .prompts import PROMPT_VERSION, SYSTEM_PROMPT, build_user_prompt
-from .schema import parse_model_text
+from .prompts import (
+    CLOTHING_CHECK_PROMPT,
+    CLOTHING_CHECK_USER_PROMPT,
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+    build_user_prompt,
+)
+from .schema import parse_clothing_check, parse_model_text
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +55,23 @@ class QwenVLProvider(VisionProvider):
         return bool(self.config.get("API_BASE") and self.config.get("MODEL"))
 
     def _payload(self, request):
-        image_b64 = base64.b64encode(request.image_bytes).decode("ascii")
+        return self._chat_payload(request.image_bytes, request.image_mime, SYSTEM_PROMPT, build_user_prompt(request))
+
+    def _chat_payload(self, image_bytes, image_mime, system, text, max_tokens=None):
+        image_b64 = base64.b64encode(image_bytes).decode("ascii")
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system},
                 {
                     "role": "user",
                     "content": [
-                        {"type": "image_url", "image_url": {"url": f"data:{request.image_mime};base64,{image_b64}"}},
-                        {"type": "text", "text": build_user_prompt(request)},
+                        {"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}},
+                        {"type": "text", "text": text},
                     ],
                 },
             ],
-            "max_tokens": self.config["MAX_TOKENS"],
+            "max_tokens": max_tokens or self.config["MAX_TOKENS"],
             "temperature": self.config["TEMPERATURE"],
             "top_p": self.config["TOP_P"],
         }
@@ -112,14 +120,8 @@ class QwenVLProvider(VisionProvider):
                 time.sleep(min(2.0, 0.5 * (attempt + 1)))
         raise last_error
 
-    def analyze(self, request):
-        if not self.is_configured():
-            raise ProviderNotConfigured("QWEN_API_BASE / QWEN_MODEL not set")
-
-        started = time.monotonic()
-        response = self._post(self._payload(request))
-        latency_ms = int((time.monotonic() - started) * 1000)
-
+    @staticmethod
+    def _read_completion(response):
         if len(response.content) > MAX_RESPONSE_BYTES:
             raise InvalidModelOutput("provider response too large")
         try:
@@ -130,7 +132,27 @@ class QwenVLProvider(VisionProvider):
             raise InvalidModelOutput("unexpected provider response shape") from exc
         if isinstance(text, list):  # some servers return content parts
             text = "".join(part.get("text", "") for part in text if isinstance(part, dict))
+        return body, choice, text
 
+    def check_clothing(self, image_bytes):
+        """Pemeriksaan singkat sebelum foto disimpan ke Digital Wardrobe."""
+        if not self.is_configured():
+            raise ProviderNotConfigured("QWEN_API_BASE / QWEN_MODEL not set")
+        payload = self._chat_payload(
+            image_bytes, "image/jpeg", CLOTHING_CHECK_PROMPT, CLOTHING_CHECK_USER_PROMPT, max_tokens=200
+        )
+        _body, _choice, text = self._read_completion(self._post(payload))
+        return parse_clothing_check(text)
+
+    def analyze(self, request):
+        if not self.is_configured():
+            raise ProviderNotConfigured("QWEN_API_BASE / QWEN_MODEL not set")
+
+        started = time.monotonic()
+        response = self._post(self._payload(request))
+        latency_ms = int((time.monotonic() - started) * 1000)
+
+        body, choice, text = self._read_completion(response)
         data = parse_model_text(text)
         usage = body.get("usage") if isinstance(body.get("usage"), dict) else {}
         return ProviderResult(

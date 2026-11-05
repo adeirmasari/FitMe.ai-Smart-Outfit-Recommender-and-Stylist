@@ -46,7 +46,10 @@ def error_info(code):
         return {"code": code, "message": message, "retryable": retryable}
     for cls in _provider_error_classes():
         if cls.code == code:
-            return {"code": code, "message": cls.user_message, "retryable": cls.retryable}
+            info = {"code": code, "message": cls.user_message, "retryable": cls.retryable}
+            if getattr(cls, "guidance", ""):
+                info["guidance"] = cls.guidance
+            return info
     return {"code": code, "message": ProviderError.user_message, "retryable": True}
 
 
@@ -60,6 +63,7 @@ def _provider_error_classes():
         base.ProviderRejected,
         base.InvalidModelOutput,
         base.WardrobeChanged,
+        base.ImageNotClothing,
         base.ProviderError,
     ]
 
@@ -157,6 +161,8 @@ def run_analysis(analysis, provider=None):
         # Log the category and internal detail only; never the image or credentials.
         logger.warning("Analysis %s failed: %s (%s)", analysis.pk, exc.code, exc)
         _fail(analysis, exc.code)
+        # Alasan penolakan dari model (mis. gambar bukan pakaian), hanya untuk respons ini.
+        analysis.rejection_reason = getattr(exc, "reason", "")
         return analysis
     except Exception:
         logger.exception("Analysis %s failed unexpectedly", analysis.pk)

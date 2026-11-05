@@ -16,8 +16,18 @@ from .base import (
     ProviderUnavailable,
     VisionProvider,
 )
-from .prompts import SYSTEM_PROMPT, build_user_prompt
-from .schema import extract_json, normalize_wardrobe_result, parse_model_text
+from .prompts import (
+    CLOTHING_CHECK_PROMPT,
+    CLOTHING_CHECK_USER_PROMPT,
+    SYSTEM_PROMPT,
+    build_user_prompt,
+)
+from .schema import (
+    extract_json,
+    normalize_wardrobe_result,
+    parse_clothing_check,
+    parse_model_text,
+)
 
 
 class GeminiProvider(VisionProvider):
@@ -183,9 +193,18 @@ class GeminiProvider(VisionProvider):
             model=self.model,
             is_mock=False,
             latency_ms=latency,
-            prompt_version="fitme-gemini-upload-v1",
+            prompt_version="fitme-gemini-upload-v2",
             metadata=metadata,
         )
+
+    def check_clothing(self, image_bytes):
+        """Pemeriksaan singkat sebelum foto disimpan ke Digital Wardrobe."""
+        text, _latency, _metadata = self._generate(
+            image_bytes,
+            CLOTHING_CHECK_PROMPT,
+            CLOTHING_CHECK_USER_PROMPT,
+        )
+        return parse_clothing_check(text)
 
     def recommend_wardrobe(self, request, catalog):
         """Pilih pakaian dari kolase Digital Wardrobe."""
