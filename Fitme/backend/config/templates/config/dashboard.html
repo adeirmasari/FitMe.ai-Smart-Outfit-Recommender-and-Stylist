@@ -1,11 +1,11 @@
 
 {% load static %}
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin | FitMe.ai</title>
+    <title>Admin Dashboard | FitMe.ai</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1026,12 +1026,12 @@
                 <span class="nav-text">Users</span>
             </a>
 
-            <a class="nav-link" href="/dashboard/analyses/" title="Analisis Outfit">
+            <a class="nav-link" href="/dashboard/analyses/" title="Outfit analyses">
                 <span class="nav-icon">▥</span>
                 <span class="nav-text">Analyses</span>
             </a>
 
-            <a class="nav-link" href="/dashboard/recommendations/" title="Rekomendasi">
+            <a class="nav-link" href="/dashboard/recommendations/" title="Recommendations">
                 <span class="nav-icon">✧</span>
                 <span class="nav-text">Recommendations</span>
             </a>
@@ -1079,7 +1079,7 @@
 
             <form class="logout-form" method="post" action="{% url 'dashboard_logout' %}">
                 {% csrf_token %}
-                <button class="logout-btn" type="submit">↪ Keluar</button>
+                <button class="logout-btn" type="submit">↪ Log out</button>
             </form>
         </header>
 
@@ -1088,8 +1088,8 @@
                 <div class="hero-eyebrow">SELAMAT DATANG DI</div>
                 <h1>FitMe.ai</h1>
                 <p class="hero-description">
-                    Dashboard administrasi untuk mengelola pengguna,
-                    analisis, rekomendasi, dan wardrobe.
+                    Admin dashboard for managing users, analyses,
+                    recommendations, and the Digital Wardrobe.
                 </p>
             </div>
 
@@ -1131,41 +1131,41 @@
                     <a class="stat-card" href="/dashboard/users/">
                         <div class="stat-top">
                             <div class="stat-icon">♙</div>
-                            <div class="stat-label">Total Pengguna</div>
+                            <div class="stat-label">Total users</div>
                         </div>
                         <div class="stat-value">{{ stats.total_users|default_if_none:0 }}</div>
                         <div class="stat-foot">↗ Pengguna terdaftar di platform</div>
-                        <span class="stat-link">Lihat pengguna →</span>
+                        <span class="stat-link">View users →</span>
                     </a>
 
                     <a class="stat-card" href="/dashboard/analyses/">
                         <div class="stat-top">
                             <div class="stat-icon">▥</div>
-                            <div class="stat-label">Total Analisis</div>
+                            <div class="stat-label">Total analyses</div>
                         </div>
                         <div class="stat-value">{{ stats.total_analyses|default_if_none:0 }}</div>
-                        <div class="stat-foot">↗ Total analisis outfit</div>
-                        <span class="stat-link">Lihat analisis →</span>
+                        <div class="stat-foot">↗ Total outfit analyses</div>
+                        <span class="stat-link">View analyses →</span>
                     </a>
 
                     <a class="stat-card" href="/dashboard/recommendations/">
                         <div class="stat-top">
                             <div class="stat-icon">✧</div>
-                            <div class="stat-label">Total Rekomendasi</div>
+                            <div class="stat-label">Total recommendations</div>
                         </div>
                         <div class="stat-value">{{ stats.total_recommendations|default_if_none:0 }}</div>
-                        <div class="stat-foot">↗ Rekomendasi tersimpan</div>
-                        <span class="stat-link">Lihat rekomendasi →</span>
+                        <div class="stat-foot">↗ Saved recommendations</div>
+                        <span class="stat-link">View recommendations →</span>
                     </a>
 
                     <a class="stat-card" href="/dashboard/wardrobe/">
                         <div class="stat-top">
                             <div class="stat-icon">♧</div>
-                            <div class="stat-label">Total Wardrobe Item</div>
+                            <div class="stat-label">Total wardrobe items</div>
                         </div>
                         <div class="stat-value">{{ stats.total_wardrobe_items|default_if_none:0 }}</div>
-                        <div class="stat-foot">↗ Item wardrobe tersimpan</div>
-                        <span class="stat-link">Lihat wardrobe →</span>
+                        <div class="stat-foot">↗ Saved wardrobe items</div>
+                        <span class="stat-link">View wardrobe →</span>
                     </a>
                 </div>
             </section>
@@ -1176,12 +1176,12 @@
                         <div>
                             <h2>Aktivitas Terbaru Pengguna</h2>
                             <p class="panel-caption">
-                                Berikut adalah aktivitas terbaru dari pengguna di platform.
+                                Recent user activity on the platform.
                             </p>
                         </div>
 
                         <a class="view-all" href="/dashboard/users/">
-                            Lihat Semua&nbsp; ›
+                            View all&nbsp; ›
                         </a>
                     </div>
 
@@ -1190,8 +1190,8 @@
                             <thead>
                                 <tr>
                                     <th>Pengguna</th>
-                                    <th>Total Analisis</th>
-                                    <th>Analisis Terbaru</th>
+                                    <th>Total analyses</th>
+                                    <th>Latest analysis</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -1209,7 +1209,7 @@
                                                     {{ item.user.username }}
                                                 </div>
                                                 <div class="user-email">
-                                                    {{ item.user.email|default:"Email belum diisi" }}
+                                                    {{ item.user.email|default:"No email provided" }}
                                                 </div>
                                             </div>
                                         </div>
@@ -1223,13 +1223,13 @@
                                         {% if item.latest_analysis %}
                                             {{ item.latest_analysis.created_at|date:"d M Y, H:i" }}
                                         {% else %}
-                                            Belum ada analisis
+                                            No analyses yet
                                         {% endif %}
                                     </td>
 
                                     <td>
                                         <a class="detail-link" href="/dashboard/users/">
-                                            Lihat Detail
+                                            View details
                                         </a>
                                     </td>
                                 </tr>
@@ -1239,7 +1239,7 @@
                                         <div class="empty-state">
                                             <div class="empty-icon">✧</div>
                                             <p>
-                                                Belum ada aktivitas pengguna yang bisa ditampilkan.
+                                                There is no user activity to display yet.
                                             </p>
                                         </div>
                                     </td>

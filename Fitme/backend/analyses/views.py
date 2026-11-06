@@ -167,7 +167,7 @@ class AnalysisViewSet(
                 {
                     "error": {
                         "code": "provider_not_configured",
-                        "message": "Analisis belum tersedia karena layanan AI belum dikonfigurasi.",
+                        "message": "Analysis is unavailable because the AI service is not configured.",
                     }
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -265,8 +265,8 @@ class AnalysisViewSet(
                     "error": {
                         "code": "provider_not_configured",
                         "message": (
-                            "Aktifkan Gemini untuk rekomendasi "
-                            "Digital Wardrobe."
+                            "Enable Gemini for Digital Wardrobe "
+                            "recommendations."
                         ),
                     }
                 },
@@ -297,8 +297,7 @@ class AnalysisViewSet(
                     "error": {
                         "code": "incomplete_wardrobe",
                         "message": (
-                            "Tambahkan minimal satu atasan "
-                            "dan satu bawahan."
+                            "Add at least one top and one bottom."
                         ),
                     }
                 },
@@ -458,8 +457,8 @@ def _check_wardrobe_image(jpeg_bytes):
                 "error": {
                     "code": "content_check_unavailable",
                     "message": (
-                        "Foto belum bisa diperiksa karena layanan AI sedang "
-                        "bermasalah. Pakaian belum disimpan; coba lagi sebentar."
+                        "The photo could not be checked because the AI service "
+                        "is experiencing issues. The item was not saved; please try again shortly."
                     ),
                 }
             },

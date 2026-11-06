@@ -41,12 +41,12 @@ class AnalysisCreateSerializer(serializers.Serializer):
 
         if image is None and wardrobe_item_id is None:
             raise serializers.ValidationError(
-                {"image": "Foto wajib diunggah kecuali kamu memilih pakaian dari Lemari Digital."}
+                {"image": "Upload a photo unless you choose an item from your Digital Wardrobe."}
             )
 
         if image and wardrobe_item_id:
             raise serializers.ValidationError(
-                "Pilih foto yang diunggah atau pakaian dari Lemari Digital, jangan keduanya."
+                "Choose either an uploaded photo or a Digital Wardrobe item, not both."
             )
 
         if image:
@@ -258,7 +258,7 @@ class WardrobeItemCreateSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         value = value.strip()
         if not value:
-            raise serializers.ValidationError("Nama pakaian wajib diisi.")
+            raise serializers.ValidationError("Clothing item name is required.")
         return value
 
     def validate_color(self, value):

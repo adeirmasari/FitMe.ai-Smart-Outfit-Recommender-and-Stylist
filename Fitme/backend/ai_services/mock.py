@@ -24,27 +24,27 @@ _NAMED = {
     "purple": (110, 60, 140),
 }
 _COLOR_LABELS = {
-    "black": "hitam",
-    "charcoal": "abu-abu arang",
-    "grey": "abu-abu",
-    "light grey": "abu-abu muda",
-    "white": "putih",
-    "cream": "krem",
-    "beige": "krem kecokelatan",
-    "camel": "cokelat muda",
-    "brown": "cokelat",
-    "navy": "biru dongker",
-    "blue": "biru",
-    "light blue": "biru muda",
-    "denim": "biru denim",
-    "green": "hijau",
-    "olive": "hijau zaitun",
-    "red": "merah",
-    "burgundy": "merah marun",
-    "pink": "merah muda",
-    "orange": "jingga",
-    "yellow": "kuning",
-    "purple": "ungu",
+    "black": "black",
+    "charcoal": "charcoal",
+    "grey": "gray",
+    "light grey": "light gray",
+    "white": "white",
+    "cream": "cream",
+    "beige": "beige",
+    "camel": "camel",
+    "brown": "brown",
+    "navy": "navy",
+    "blue": "blue",
+    "light blue": "light blue",
+    "denim": "denim",
+    "green": "green",
+    "olive": "olive",
+    "red": "red",
+    "burgundy": "burgundy",
+    "pink": "pink",
+    "orange": "orange",
+    "yellow": "yellow",
+    "purple": "purple",
 }
 
 
@@ -86,32 +86,32 @@ class MockVisionProvider(VisionProvider):
         colors = measured_colors(request.image_bytes)
         for color in colors:
             color["name"] = _COLOR_LABELS.get(color["name"], color["name"])
-        names = ", ".join(c["name"] for c in colors) or "warna netral"
+        names = ", ".join(c["name"] for c in colors) or "neutral colors"
         occasion = {
-            "casual": "kasual",
-            "campus": "kampus",
-            "work": "kerja",
-            "formal event": "acara formal",
-            "party": "pesta",
+            "casual": "casual",
+            "campus": "campus",
+            "work": "work",
+            "formal event": "formal event",
+            "party": "party",
         }.get(request.occasion.lower(), request.occasion)
         if occasion.lower().startswith("other:"):
-            occasion = f"Lainnya:{occasion[6:]}"
+            occasion = f"Other:{occasion[6:]}"
         raw = {
             "visual_analysis": (
-                "[Data uji] Model visual tidak dipanggil. "
-                f"Pengambilan sampel piksel menemukan warna dominan: {names}."
+                "[Test data] The vision model was not called. "
+                f"Pixel sampling found these dominant colors: {names}."
             ),
             "clothing_items": [],
             "dominant_colors": colors,
-            "styling_observations": ["[Data uji] Ini adalah contoh tampilan hasil analisis."],
+            "styling_observations": ["[Test data] This is an example of the analysis results display."],
             "primary_recommendation": (
-                f"[Data uji] Contoh rekomendasi untuk acara {occasion}. "
-                "Atur AI_PROVIDER ke layanan AI untuk mendapatkan saran gaya sebenarnya."
+                f"[Test data] Sample recommendation for a {occasion} occasion. "
+                "Configure AI_PROVIDER to get actual styling advice from an AI service."
             ),
-            "color_suggestions": [{"palette": [c["name"] for c in colors[:2]], "note": "[Data uji] Warna diukur dari foto."}],
+            "color_suggestions": [{"palette": [c["name"] for c in colors[:2]], "note": "[Test data] Colors measured from the photo."}],
             "alternative_outfits": [],
-            "occasion_rationale": "[Data uji] Alasan khusus untuk acara tidak dibuat.",
-            "limitations": ["Hasil ini adalah data uji, bukan keluaran model AI. Pakaian tidak dideteksi."],
+            "occasion_rationale": "[Test data] No occasion-specific reasoning was generated.",
+            "limitations": ["This is test data, not AI output. Clothing was not detected."],
         }
         return ProviderResult(
             data=normalize_result(raw),

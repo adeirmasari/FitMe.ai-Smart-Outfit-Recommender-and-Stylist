@@ -97,7 +97,7 @@ How the integration behaves:
 - **Bounded input:** the stored image is at most 2048 px and the copy sent to the model at most 1280 px (`FITME_MODEL_IMAGE_MAX_SIDE`). User text fields are capped at 80–300 characters and stripped of control characters.
 - **Prompt-injection hygiene:** user text goes inside a `<USER_PREFERENCES>` block, and the system prompt says to treat it as preferences only. The model has no tools: its output is parsed as data and never executed.
 - **Output validation:** `ai_services/schema.py` extracts the first JSON object, even from fenced or chatty replies. It then coerces every field into a bounded shape: max 12 items per list, capped string lengths, hex colours checked with a regex. It requires `visual_analysis`, `primary_recommendation` and `occasion_rationale`. If parsing fails, the analysis is marked `failed / invalid_model_output`; the app doesn't crash.
-- **Language:** the interface and user-facing recommendation text are in Bahasa Indonesia; JSON keys and category values remain schema-defined.
+- **Language:** the interface and user-facing recommendation text are in English; JSON keys and category values remain schema-defined.
 - **No fabricated output:** when the provider fails, no recommendation is stored. The analysis keeps its photo and a safe error code, and the user can **retry** (`POST /api/analyses/{id}/retry/`, max 5 attempts).
 - **Logging:** errors log the analysis id and error category only. Images, base64 payloads and API keys are never logged, and urllib3 debug logging is silenced.
 - **Stored metadata:** provider, model id, prompt version, latency, token usage, finish reason and provider request id.

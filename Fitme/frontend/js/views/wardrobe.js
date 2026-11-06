@@ -5,9 +5,11 @@ import { clear, h, toast } from "../dom.js";
 const API = "/api/wardrobe/";
 
 const CATEGORIES = [
-  ["top", "Atasan"],
-  ["bottom", "Bawahan"],
+  ["top", "Top"],
+  ["bottom", "Bottom"],
 ];
+
+const CATEGORY_LABELS = { top: "Top", bottom: "Bottom" };
 
 function el(tag, attrs = {}, ...children) {
   return h(tag, attrs, ...children);
@@ -34,7 +36,7 @@ function makeForm(item = null) {
     required: true,
     maxlength: 120,
     value: item?.name || "",
-    placeholder: "Contoh: Kemeja putih",
+    placeholder: "Example: White shirt",
   });
   const category = categorySelect(item?.category || "top");
   const color = el("input", {
@@ -42,15 +44,15 @@ function makeForm(item = null) {
     name: "color",
     maxlength: 80,
     value: item?.color || "",
-    placeholder: "Contoh: Putih",
+    placeholder: "Example: White",
   });
 
   const form = el(
     "form",
     { class: "wardrobe-form" },
-    makeField("Nama pakaian", name),
-    makeField("Kategori", category),
-    makeField("Warna (opsional)", color),
+    makeField("Item name", name),
+    makeField("Category", category),
+    makeField("Color (optional)", color),
   );
 
   let image = null;
@@ -70,15 +72,15 @@ function makeForm(item = null) {
       role: "alert",
       hidden: true,
     });
-    form.append(makeField("Foto pakaian", image), imageError);
+    form.append(makeField("Item photo", image), imageError);
     form.append(
       el(
         "p",
         { class: "muted small" },
-        "Gunakan foto JPG, PNG, atau WebP yang menampilkan pakaian dengan jelas. Foto yang bukan pakaian akan ditolak.",
+        "Use a JPG, PNG, or WebP photo that clearly shows clothing. Photos that do not show clothing will be rejected.",
       ),
     );
-    // Pesan penolakan hilang begitu pengguna memilih foto pengganti.
+    // Clear the rejection message when the user selects a replacement photo.
     image.addEventListener("change", () => {
       imageError.hidden = true;
       clear(imageError);
@@ -91,10 +93,10 @@ function makeForm(item = null) {
 
 function dialogFor(item = null) {
   const dialog = el("dialog", { class: "wardrobe-dialog" });
-  const heading = el("h2", {}, item ? "Edit pakaian" : "Tambah pakaian");
+  const heading = el("h2", {}, item ? "Edit item" : "Add an item");
   const { form, name, category, color, image, imageError } = makeForm(item);
-  const cancel = el("button", { class: "btn btn-ghost", type: "button" }, "Batal");
-  const submit = el("button", { class: "btn", type: "submit" }, item ? "Simpan perubahan" : "Unggah pakaian");
+  const cancel = el("button", { class: "btn btn-ghost", type: "button" }, "Cancel");
+  const submit = el("button", { class: "btn", type: "submit" }, item ? "Save changes" : "Upload item");
   const actions = el("div", { class: "wardrobe-form-actions" }, cancel, submit);
 
   form.append(actions);
@@ -112,7 +114,7 @@ function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ""
-    : new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(date);
+    : new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
 }
 
 export async function renderWardrobe(ctx) {
@@ -123,29 +125,29 @@ export async function renderWardrobe(ctx) {
     el(
       "div",
       {},
-      el("span", { class: "eyebrow" }, "Lemari digital"),
-      el("h1", {}, "Lemari Digital"),
-      el("p", {}, "Simpan dan kelola koleksi pakaianmu dalam satu tempat."),
+      el("span", { class: "eyebrow" }, "Your collection"),
+      el("h1", {}, "Digital Wardrobe"),
+      el("p", {}, "Store and manage your clothing collection in one place."),
     ),
-    el("button", { class: "btn", type: "button" }, "+ Tambah pakaian"),
+    el("button", { class: "btn", type: "button" }, "+ Add an item"),
   );
 
   const addButton = header.querySelector("button");
   const toolbar = el("div", { class: "wardrobe-toolbar" });
   const search = el("input", {
     type: "text",
-    placeholder: "Cari nama atau warna pakaian…",
-    "aria-label": "Cari pakaian",
+    placeholder: "Search by item name or color…",
+    "aria-label": "Search items",
   });
   const filter = el(
     "select",
-    { "aria-label": "Filter kategori" },
-    el("option", { value: "" }, "Semua kategori"),
+    { "aria-label": "Filter by category" },
+    el("option", { value: "" }, "All categories"),
     ...CATEGORIES.map(([value, label]) => el("option", { value }, label)),
   );
-  const count = el("p", { class: "muted small", "aria-live": "polite" }, "Memuat koleksi…");
+  const count = el("p", { class: "muted small", "aria-live": "polite" }, "Loading collection…");
   const grid = el("div", { class: "wardrobe-grid" });
-  const status = el("div", { class: "center-state" }, "Memuat koleksi pakaian…");
+  const status = el("div", { class: "center-state" }, "Loading wardrobe…");
 
   toolbar.append(search, filter);
   root.append(header, toolbar, count, status, grid);
@@ -173,7 +175,7 @@ export async function renderWardrobe(ctx) {
         }
         imageUrls.set(item.id, url);
       } catch (error) {
-        console.warn("Gagal memuat foto pakaian:", item.id, error);
+        console.warn("Could not load wardrobe item photo:", item.id, error);
       }
     }
   }
@@ -187,19 +189,19 @@ export async function renderWardrobe(ctx) {
       return matchesText && (!category || item.category === category);
     });
 
-    count.textContent = `${filtered.length} pakaian`;
+    count.textContent = `${filtered.length} ${filtered.length === 1 ? "item" : "items"}`;
     if (!filtered.length) {
       grid.append(
         el(
           "div",
           { class: "wardrobe-empty" },
-          el("h2", {}, items.length ? "Tidak ada pakaian yang cocok" : "Lemari kamu masih kosong"),
+          el("h2", {}, items.length ? "No matching items" : "Your wardrobe is empty"),
           el(
             "p",
             { class: "muted" },
             items.length
-              ? "Coba kata kunci atau kategori lain."
-              : "Tambahkan foto pakaian pertamamu untuk mulai membangun koleksi.",
+              ? "Try another search term or category."
+              : "Add your first clothing photo to start building your collection.",
           ),
         ),
       );
@@ -210,26 +212,26 @@ export async function renderWardrobe(ctx) {
       const image = el("div", { class: "wardrobe-card-image" });
       const url = imageUrls.get(item.id);
       if (url) {
-        image.append(el("img", { src: url, alt: item.name || "Foto pakaian", loading: "lazy" }));
+        image.append(el("img", { src: url, alt: item.name || "Clothing item photo", loading: "lazy" }));
       } else {
-        image.append(el("span", { class: "muted small" }, "Foto tidak tersedia"));
+        image.append(el("span", { class: "muted small" }, "Photo unavailable"));
       }
 
       const details = el(
         "div",
         { class: "wardrobe-card-details" },
-        el("span", { class: "eyebrow" }, item.category_label || item.category),
-        el("h2", {}, item.name || "Tanpa nama"),
-        el("p", { class: "muted small" }, item.color || "Warna belum diisi"),
+        el("span", { class: "eyebrow" }, CATEGORY_LABELS[item.category] || item.category),
+        el("h2", {}, item.name || "Unnamed item"),
+        el("p", { class: "muted small" }, item.color || "Color not specified"),
         el(
           "p",
           { class: "muted small" },
-          item.created_at ? `Ditambahkan ${formatDate(item.created_at)}` : "",
+          item.created_at ? `Added ${formatDate(item.created_at)}` : "",
         ),
       );
 
       const edit = el("button", { class: "btn btn-ghost", type: "button" }, "Edit");
-      const remove = el("button", { class: "btn btn-danger", type: "button" }, "Hapus");
+      const remove = el("button", { class: "btn btn-danger", type: "button" }, "Delete");
       const actions = el("div", { class: "wardrobe-card-actions" }, edit, remove);
       const card = el("article", { class: "wardrobe-card" }, image, details, actions);
 
@@ -244,7 +246,7 @@ export async function renderWardrobe(ctx) {
     loading = true;
     status.hidden = false;
     grid.hidden = true;
-    status.textContent = "Memuat koleksi pakaian…";
+    status.textContent = "Loading wardrobe…";
 
     try {
       const data = await request(API);
@@ -260,9 +262,9 @@ export async function renderWardrobe(ctx) {
       status.textContent = "";
       clear(status);
       status.append(
-        el("h2", {}, "Koleksi belum dapat dimuat"),
-        el("p", {}, error.message || "Silakan coba lagi."),
-        el("button", { class: "btn btn-ghost", type: "button" }, "Coba lagi"),
+        el("h2", {}, "Could not load wardrobe"),
+        el("p", {}, error.message || "Please try again."),
+        el("button", { class: "btn btn-ghost", type: "button" }, "Try again"),
       );
       status.querySelector("button").addEventListener("click", refresh);
     } finally {
@@ -296,35 +298,35 @@ export async function renderWardrobe(ctx) {
       formData.append("image", file);
 
       submit.disabled = true;
-      submit.textContent = "Memeriksa foto…";
+      submit.textContent = "Checking photo…";
       try {
         await upload(API, formData);
         if (disposed) return;
         dialog.close();
-        toast("Pakaian berhasil ditambahkan.");
+        toast("Item added.");
         await refresh();
       } catch (error) {
         if (error.code === "image_not_clothing") {
-          // Ditolak sebelum disimpan: tidak masuk koleksi.
+          // Rejected before saving, so it is not added to the collection.
           const info = error.data?.error || {};
           showImageProblem(
             el("strong", { style: { display: "block" } }, error.message),
-            info.reason ? el("span", { style: { display: "block" } }, `Alasan: ${info.reason}`) : null,
+            info.reason ? el("span", { style: { display: "block" } }, `Reason: ${info.reason}`) : null,
             el(
               "span",
               { style: { display: "block" } },
-              info.guidance || "Ganti dengan foto yang menampilkan pakaian secara jelas.",
+              info.guidance || "Replace it with a photo that clearly shows clothing.",
             ),
           );
         } else if (error.fields?.image) {
           showImageProblem(el("span", {}, [].concat(error.fields.image).join(" ")));
         } else {
-          toast(error.message || "Upload gagal.", { error: true });
+          toast(error.message || "Upload failed.", { error: true });
         }
       } finally {
         if (submit.isConnected) {
           submit.disabled = false;
-          submit.textContent = "Unggah pakaian";
+          submit.textContent = "Upload item";
         }
       }
     });
@@ -349,10 +351,10 @@ export async function renderWardrobe(ctx) {
         });
         if (disposed) return;
         dialog.close();
-        toast("Informasi pakaian berhasil diperbarui.");
+        toast("Item updated.");
         await refresh();
       } catch (error) {
-        toast(error.message || "Gagal memperbarui pakaian.", { error: true });
+        toast(error.message || "Could not update item.", { error: true });
       } finally {
         if (submit.isConnected) submit.disabled = false;
       }
@@ -361,7 +363,7 @@ export async function renderWardrobe(ctx) {
   }
 
   async function deleteItem(item) {
-    const confirmed = window.confirm(`Hapus "${item.name || "pakaian ini"}" dari Lemari Digital?`);
+    const confirmed = window.confirm(`Delete "${item.name || "this item"}" from your Digital Wardrobe?`);
     if (!confirmed) return;
 
     try {
@@ -371,9 +373,9 @@ export async function renderWardrobe(ctx) {
       imageUrls.delete(item.id);
       items = items.filter((entry) => entry.id !== item.id);
       renderGrid();
-      toast("Pakaian berhasil dihapus.");
+      toast("Item deleted.");
     } catch (error) {
-      toast(error.message || "Gagal menghapus pakaian.", { error: true });
+      toast(error.message || "Could not delete item.", { error: true });
     }
   }
 

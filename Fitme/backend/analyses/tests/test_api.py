@@ -147,7 +147,7 @@ class InvalidUploadTests(FitMeTestCase):
     @override_settings(FITME_MAX_UPLOAD_BYTES=1000)
     def test_file_too_large(self):
         res = self.assertRejected({"image": upload(), "occasion": "work"})
-        self.assertIn("Ukuran foto maksimal", res.data["error"]["message"])
+        self.assertIn("maximum photo size", res.data["error"]["message"])
 
     @override_settings(FITME_MAX_IMAGE_PIXELS=100_000)
     def test_decompression_bomb_guard(self):

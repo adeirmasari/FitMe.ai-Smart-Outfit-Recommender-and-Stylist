@@ -50,21 +50,21 @@ def _flatten(img):
 def validate_and_process(upload):
     max_bytes = settings.FITME_MAX_UPLOAD_BYTES
     if upload.size is None or upload.size == 0:
-        raise ImageRejected("File yang diunggah kosong.", "empty_file")
+        raise ImageRejected("The uploaded file is empty.", "empty_file")
     if upload.size > max_bytes:
         max_size = (
             f"{max_bytes / (1024 * 1024):g} MB"
             if max_bytes >= 1024 * 1024
             else f"{max_bytes} byte"
         )
-        raise ImageRejected(f"Ukuran foto maksimal {max_size}.", "file_too_large")
+        raise ImageRejected(f"The maximum photo size is {max_size}.", "file_too_large")
 
     ext = os.path.splitext(upload.name or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise ImageRejected("Unggah gambar berformat JPEG, PNG, atau WebP.", "unsupported_type")
+        raise ImageRejected("Upload a JPEG, PNG, or WebP image.", "unsupported_type")
     content_type = (getattr(upload, "content_type", "") or "").lower()
     if content_type and content_type not in ALLOWED_CONTENT_TYPES:
-        raise ImageRejected("Unggah gambar berformat JPEG, PNG, atau WebP.", "unsupported_type")
+        raise ImageRejected("Upload a JPEG, PNG, or WebP image.", "unsupported_type")
 
     data = upload.read()
     Image.MAX_IMAGE_PIXELS = settings.FITME_MAX_IMAGE_PIXELS
@@ -73,24 +73,24 @@ def validate_and_process(upload):
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(io.BytesIO(data)) as probe:
                 if probe.format not in ALLOWED_FORMATS:
-                    raise ImageRejected("Unggah gambar berformat JPEG, PNG, atau WebP.", "unsupported_type")
+                    raise ImageRejected("Upload a JPEG, PNG, or WebP image.", "unsupported_type")
                 probe.verify()
             img = Image.open(io.BytesIO(data))
             img.load()
     except ImageRejected:
         raise
     except (Image.DecompressionBombError, Image.DecompressionBombWarning):
-        raise ImageRejected("Resolusi gambar terlalu besar untuk diproses.", "image_too_large")
+        raise ImageRejected("The image resolution is too large to process.", "image_too_large")
     except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
-        raise ImageRejected("File ini tidak dapat dibaca sebagai gambar.", "corrupt_image")
+        raise ImageRejected("This file could not be read as an image.", "corrupt_image")
 
     width, height = img.size
     if min(width, height) < settings.FITME_MIN_IMAGE_SIDE:
         raise ImageRejected(
-            f"Resolusi foto terlalu kecil. Gunakan minimal {settings.FITME_MIN_IMAGE_SIDE}px pada setiap sisi.", "image_too_small"
+            f"The photo resolution is too low. Each side must be at least {settings.FITME_MIN_IMAGE_SIDE}px.", "image_too_small"
         )
     if max(width, height) > settings.FITME_MAX_IMAGE_SIDE:
-        raise ImageRejected(f"Resolusi foto maksimal {settings.FITME_MAX_IMAGE_SIDE}px pada sisi terpanjang.", "image_too_large")
+        raise ImageRejected(f"The photo's longest side must be no more than {settings.FITME_MAX_IMAGE_SIDE}px.", "image_too_large")
 
     img = _flatten(ImageOps.exif_transpose(img))
     img.thumbnail((settings.FITME_STORED_IMAGE_MAX_SIDE,) * 2, Image.Resampling.LANCZOS)

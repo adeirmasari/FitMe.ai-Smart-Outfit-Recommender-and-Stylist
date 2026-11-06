@@ -140,12 +140,12 @@ def dashboard_detail(request, section):
     User = get_user_model()
 
     if section == "users":
-        title = "Daftar Pengguna"
+        title = "User Accounts"
         rows = User.objects.order_by("-date_joined")
         fields = ["username", "email", "date_joined"]
 
     elif section == "analyses":
-        title = "Analisis Outfit"
+        title = "Outfit Analyses"
         rows = OutfitAnalysis.objects.select_related(
             "owner"
         ).order_by("-created_at")
@@ -158,7 +158,7 @@ def dashboard_detail(request, section):
         ]
 
     elif section == "recommendations":
-        title = "Rekomendasi Outfit"
+        title = "Outfit Recommendations"
         rows = OutfitRecommendation.objects.select_related(
             "analysis",
             "analysis__owner",
@@ -166,7 +166,7 @@ def dashboard_detail(request, section):
         fields = ["analysis", "created_at"]
 
     elif section == "wardrobe":
-        title = "Wardrobe"
+        title = "Digital Wardrobe"
         rows = WardrobeItem.objects.select_related(
             "owner"
         ).order_by("-created_at")
@@ -179,7 +179,7 @@ def dashboard_detail(request, section):
         ]
 
     else:
-        raise Http404("Halaman detail tidak ditemukan")
+        raise Http404("Detail page not found")
 
     page_obj = Paginator(rows, 15).get_page(
         request.GET.get("page")
@@ -218,7 +218,7 @@ def website_login(request):
                 return render(
                     request,
                     "config/login.html",
-                    {"error": "Akun ini tidak memiliki akses admin."},
+                    {"error": "This account does not have administrator access."},
                 )
 
             login(request, user)
@@ -227,7 +227,7 @@ def website_login(request):
         return render(
             request,
             "config/login.html",
-            {"error": "Username atau password salah."},
+            {"error": "Incorrect username or password."},
         )
 
     return render(request, "config/login.html")

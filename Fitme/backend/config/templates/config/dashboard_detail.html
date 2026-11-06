@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -217,7 +217,7 @@
 </head>
 
 <body>
-    <a class="back" href="/dashboard/">← Kembali ke Dashboard</a>
+    <a class="back" href="/dashboard/">← Back to dashboard</a>
 
     <header>
         <div class="eyebrow">FITME.AI / WORKSPACE</div>
@@ -225,19 +225,19 @@
 
         {% if section == "users" %}
             <p class="subtitle">
-                Daftar akun yang terdaftar di FitMe.ai.
+                Accounts registered with FitMe.ai.
             </p>
         {% elif section == "analyses" %}
             <p class="subtitle">
-                Pantau riwayat analisis outfit seluruh pengguna.
+                View outfit analysis history for all users.
             </p>
         {% elif section == "recommendations" %}
             <p class="subtitle">
-                Lihat rekomendasi outfit yang tersimpan.
+                View saved outfit recommendations.
             </p>
         {% elif section == "wardrobe" %}
             <p class="subtitle">
-                Kelola informasi item pakaian milik pengguna.
+                Manage users' clothing items.
             </p>
         {% endif %}
     </header>
@@ -246,18 +246,18 @@
         <div class="panel-header">
             <h2>
                 {% if section == "users" %}
-                    Data pengguna
+                    User data
                 {% elif section == "analyses" %}
-                    Riwayat analisis
+                    Analysis history
                 {% elif section == "recommendations" %}
-                    Data rekomendasi
+                    Recommendation data
                 {% else %}
-                    Koleksi wardrobe
+                    Digital Wardrobe
                 {% endif %}
             </h2>
 
             <span class="count">
-                {{ page_obj.paginator.count }} data
+                {{ page_obj.paginator.count }} records
             </span>
         </div>
 
@@ -268,26 +268,26 @@
                         {% if section == "users" %}
                             <th>Username</th>
                             <th>Email</th>
-                            <th>Tanggal bergabung</th>
+                            <th>Date joined</th>
 
                         {% elif section == "analyses" %}
-                            <th>Pengguna</th>
-                            <th>Acara</th>
-                            <th>Gaya</th>
+                            <th>User</th>
+                            <th>Occasion</th>
+                            <th>Style</th>
                             <th>Status</th>
-                            <th>Tanggal</th>
+                            <th>Date</th>
 
                         {% elif section == "recommendations" %}
-                            <th>Pengguna</th>
-                            <th>Acara</th>
-                            <th>Tanggal</th>
+                            <th>User</th>
+                            <th>Occasion</th>
+                            <th>Date</th>
 
                         {% elif section == "wardrobe" %}
-                            <th>Pengguna</th>
-                            <th>Nama item</th>
-                            <th>Kategori</th>
-                            <th>Warna</th>
-                            <th>Tanggal</th>
+                            <th>User</th>
+                            <th>Item name</th>
+                            <th>Category</th>
+                            <th>Color</th>
+                            <th>Date</th>
                         {% endif %}
                     </tr>
                 </thead>
@@ -330,8 +330,8 @@
                         <td colspan="5">
                             <div class="empty">
                                 <div class="empty-icon">✧</div>
-                                <h3>Belum ada data</h3>
-                                <p>Data akan muncul di sini setelah tersedia.</p>
+                                <h3>No data yet</h3>
+                                <p>Data will appear here when available.</p>
                             </div>
                         </td>
                     </tr>
@@ -341,23 +341,23 @@
         </div>
 
         {% if page_obj.paginator.num_pages > 1 %}
-        <nav class="pagination" aria-label="Navigasi halaman">
+        <nav class="pagination" aria-label="Pagination">
             {% if page_obj.has_previous %}
                 <a class="page-link"
                    href="?page={{ page_obj.previous_page_number }}">
-                    ← Sebelumnya
+                    ← Previous
                 </a>
             {% endif %}
 
             <span>
-                Halaman {{ page_obj.number }}
-                dari {{ page_obj.paginator.num_pages }}
+                Page {{ page_obj.number }}
+                of {{ page_obj.paginator.num_pages }}
             </span>
 
             {% if page_obj.has_next %}
                 <a class="page-link"
                    href="?page={{ page_obj.next_page_number }}">
-                    Berikutnya →
+                    Next →
                 </a>
             {% endif %}
         </nav>

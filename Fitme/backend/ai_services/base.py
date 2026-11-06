@@ -7,39 +7,39 @@ class ProviderError(Exception):
     """Base class. `code` is stored on the analysis and shown to the user."""
 
     code = "provider_error"
-    user_message = "AI belum dapat menyelesaikan analisis ini. Silakan coba lagi."
+    user_message = "The AI could not complete this analysis. Please try again."
     retryable = True
 
 
 class ProviderNotConfigured(ProviderError):
     code = "provider_not_configured"
-    user_message = "Analisis belum tersedia karena layanan AI belum dikonfigurasi."
+    user_message = "Analysis is unavailable because the AI service is not configured."
     retryable = False
 
 
 class ProviderTimeout(ProviderError):
     code = "provider_timeout"
-    user_message = "AI terlalu lama merespons. Silakan coba lagi sebentar lagi."
+    user_message = "The AI took too long to respond. Please try again shortly."
 
 
 class ProviderUnavailable(ProviderError):
     code = "provider_unavailable"
-    user_message = "Layanan AI sedang tidak tersedia. Silakan coba lagi sebentar lagi."
+    user_message = "The AI service is temporarily unavailable. Please try again shortly."
 
 
 class ProviderRejected(ProviderError):
     code = "provider_rejected"
-    user_message = "Layanan AI menolak permintaan ini. Coba gunakan foto lain."
+    user_message = "The AI service rejected this request. Try using a different photo."
     retryable = False
 
 
 class InvalidModelOutput(ProviderError):
     code = "invalid_model_output"
-    user_message = "Jawaban AI tidak lengkap. Coba ulangi analisis ini."
+    user_message = "The AI response was incomplete. Try running this analysis again."
 
 class WardrobeChanged(ProviderError):
     code = "wardrobe_changed"
-    user_message = "Koleksi pakaian berubah selama analisis. Buat rekomendasi baru."
+    user_message = "Your wardrobe changed during the analysis. Generate a new recommendation."
     retryable = False
 
 
@@ -47,10 +47,10 @@ class ImageNotClothing(ProviderError):
     """Model melihat gambar yang bukan pakaian. Bukan kegagalan teknis, jadi tidak bisa dicoba ulang."""
 
     code = "image_not_clothing"
-    user_message = "Foto ditolak karena tidak terdeteksi sebagai pakaian."
+    user_message = "This photo was rejected because no clothing was detected."
     guidance = (
-        "Gunakan foto yang menampilkan pakaian secara jelas, misalnya atasan, bawahan, "
-        "sepatu, atau pakaian yang sedang dikenakan, dengan pencahayaan cukup dan tidak terpotong."
+        "Use a clear photo of clothing, such as a top, bottom, shoes, or an outfit being worn. "
+        "Make sure it has good lighting and is not cropped."
     )
     retryable = False
 

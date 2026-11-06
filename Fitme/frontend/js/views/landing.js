@@ -28,17 +28,17 @@ export function renderLanding() {
       h(
         "div",
         {},
-        h("p", { class: "eyebrow" }, "Analisis pakaian · Penataan gaya pribadi"),
+        h("p", { class: "eyebrow" }, "Outfit analysis · Personal styling"),
         h(
           "h1",
           {},
-          "Kenakan pakaian yang sesuai dengan ",
-          h("em", {}, "acara tujuanmu."),
+          "Dress for the ",
+          h("em", {}, "occasion."),
         ),
         h(
           "p",
           { class: "lede" },
-          "Unggah foto pakaian atau gunakan Lemari Digital, pilih acara, lalu temukan inspirasi gaya yang sesuai untukmu.",
+          "Upload an outfit photo or choose items from your Digital Wardrobe. Select an occasion and discover a look that works for you.",
         ),
         h(
           "div",
@@ -46,39 +46,39 @@ export function renderLanding() {
           h(
             "a",
             { class: "btn btn-accent", href: primaryHref },
-            "Analisis pakaian",
+            "Analyze an outfit",
           ),
           signedIn
             ? h(
                 "a",
                 { class: "btn btn-ghost", href: "/history" },
-                "Riwayatmu",
+                "Your history",
               )
             : h(
                 "a",
                 { class: "btn btn-ghost", href: "/login" },
-                "Masuk",
+                "Log in",
               ),
         ),
       ),
       h(
         "div",
-        { class: "hero-plates", "aria-label": "Contoh foto pakaian" },
+        { class: "hero-plates", "aria-label": "Outfit photo examples" },
         plate(
           `${S}/0000080.jpg`,
-          "Legging kulit hitam, sepatu hak merah, dan blus hitam transparan",
-          "Malam",
+          "Black leather leggings, red heels, and a sheer black blouse",
+          "Evening",
           "plate-tall",
         ),
         plate(
           `${S}/0000320.jpg`,
-          "Atasan turtleneck warna bata, rok tweed, dan sepatu bot selutut",
-          "Kerja",
+          "Rust turtleneck, tweed skirt, and knee-high boots",
+          "Work",
         ),
         plate(
           `${S}/0000232.jpg`,
-          "Sepatu hak merah, legging hitam, dan mantel merah",
-          "Akhir pekan",
+          "Red heels, black leggings, and a red coat",
+          "Weekend",
         ),
       ),
     ),
@@ -93,8 +93,8 @@ export function renderLanding() {
       h(
         "div",
         { class: "section-head" },
-        h("p", { class: "eyebrow" }, "Cara kerja"),
-        h("h2", { id: "how" }, "Temukan inspirasi pakaian dalam tiga langkah."),
+        h("p", { class: "eyebrow" }, "How it works"),
+        h("h2", { id: "how" }, "Find outfit inspiration in three steps."),
       ),
       h(
         "ol",
@@ -102,31 +102,31 @@ export function renderLanding() {
         h(
           "li",
           {},
-          h("h3", {}, "Pilih pakaian"),
+          h("h3", {}, "Choose an outfit"),
           h(
             "p",
             {},
-            "Unggah foto pakaian atau pilih koleksi dari Lemari Digital.",
+            "Upload an outfit photo or choose items from your Digital Wardrobe.",
           ),
         ),
         h(
           "li",
           {},
-          h("h3", {}, "Ceritakan acaramu"),
+          h("h3", {}, "Tell us about your occasion"),
           h(
             "p",
             {},
-            "Pilih acara dan tambahkan gaya atau kesan yang ingin ditampilkan.",
+            "Choose an occasion and add the style or impression you want to convey.",
           ),
         ),
         h(
           "li",
           {},
-          h("h3", {}, "Lihat rekomendasimu"),
+          h("h3", {}, "Get your recommendation"),
           h(
             "p",
             {},
-            "Lihat saran beserta alasannya. Rekomendasi Lemari Digital menggunakan pakaian milikmu dan tersimpan di riwayat.",
+            "See styling suggestions and the reasoning behind them. Digital Wardrobe recommendations use your own clothes and are saved to your history.",
           ),
         ),
       ),
@@ -141,27 +141,27 @@ export function renderLanding() {
       { class: "shell example" },
       plate(
         `${S}/0000500.jpg`,
-        "Celana jins hitam dengan kantong ritsleting dan sepatu hak hitam",
-        "Contoh foto",
+        "Black jeans with zip pockets and black heels",
+        "Photo example",
       ),
       h(
         "div",
         {},
-        h("p", { class: "eyebrow" }, "Contoh hasil rekomendasi"),
+        h("p", { class: "eyebrow" }, "Sample recommendation"),
         h(
           "h2",
           { id: "example", class: "visually-hidden" },
-          "Contoh rekomendasi",
+          "Sample recommendation",
         ),
         h(
           "p",
           { class: "ask", style: { marginTop: "var(--space-4)" } },
-          "“Bantu pilihkan sweater untuk celana jins hitam dan sepatu hak saya.”",
+          "“Help me choose a sweater to wear with my black jeans and heels.”",
         ),
         h(
           "blockquote",
           {},
-          "Sweater abu-abu berlengan panjang. Manset bertekstur dan kerah bulat memberi sentuhan lembut pada pakaian hitam, sementara sepatu hak tetap menjadi pusat perhatian.",
+          "A long-sleeved gray sweater. Textured cuffs and a crew neck soften the all-black look while keeping the heels as the focal point.",
         ),
         h(
           "dl",
@@ -169,31 +169,31 @@ export function renderLanding() {
           h(
             "div",
             {},
-            h("dt", {}, "Terlihat di foto"),
+            h("dt", {}, "Seen in the photo"),
             h(
               "dd",
               {},
-              "Celana jins hitam dengan kantong ritsleting; sepatu hak hitam berujung lancip dengan tekstur seperti suede.",
+              "Black jeans with zip pockets; pointed-toe black heels with a suede-like texture.",
             ),
           ),
           h(
             "div",
             {},
-            h("dt", {}, "Alternatif"),
+            h("dt", {}, "Alternative"),
             h(
               "dd",
               {},
-              "Saat cuaca dingin, mantel cokelat muda berkancing ganda dan berikat pinggang memberi kesan lebih rapi.",
+              "For cooler weather, a light brown double-breasted belted coat creates a more polished look.",
             ),
           ),
           h(
             "div",
             {},
-            h("dt", {}, "Batasan"),
+            h("dt", {}, "Limitations"),
             h(
               "dd",
               {},
-              "Atasan tidak terlihat, jadi saran ini belum memperhitungkan pakaian yang akan dikenakan sebagai lapisan dalam.",
+              "The top is not visible, so this suggestion does not account for the layer underneath.",
             ),
           ),
         ),
@@ -203,7 +203,7 @@ export function renderLanding() {
             class: "small muted",
             style: { marginTop: "var(--space-5)" },
           },
-          "Contoh ilustratif yang diadaptasi dari percakapan penata gaya dalam dataset FitMe — bukan hasil AI langsung.",
+          "Illustrative example adapted from a stylist conversation in the FitMe dataset — not a live AI result.",
         ),
       ),
     ),
@@ -215,11 +215,11 @@ export function renderLanding() {
     h(
       "div",
       { class: "shell" },
-      h("h2", {}, "Sudah punya pakaian yang ingin dipadukan?"),
+      h("h2", {}, "Ready to style your outfit?"),
       h(
         "a",
         { class: "btn btn-accent", href: primaryHref },
-        signedIn ? "Mulai analisis" : "Buat akun gratis",
+        signedIn ? "Start analyzing" : "Create a free account",
       ),
     ),
   ),

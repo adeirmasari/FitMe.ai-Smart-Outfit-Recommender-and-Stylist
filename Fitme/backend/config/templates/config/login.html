@@ -1,11 +1,11 @@
 
 {% load static %}
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Admin | FitMe.ai</title>
+    <title>Admin Login | FitMe.ai</title>
 
     <style>
         :root {
@@ -228,9 +228,9 @@
         </header>
 
         <section class="login-card">
-            <h2>Selamat Datang</h2>
+            <h2>Welcome</h2>
             <p class="description">
-                Masuk menggunakan akun administrator untuk mengakses dashboard FitMe.ai.
+                Log in with your administrator account to access the FitMe.ai dashboard.
             </p>
 
             {% if error %}
@@ -241,8 +241,8 @@
 
             {% if form.errors %}
                 <div class="error-message" role="alert">
-                    Username atau password salah, atau akun tidak dapat digunakan untuk login.
-                    Silakan periksa kembali informasi akun Anda.
+                    The username or password is incorrect, or this account cannot log in.
+                    Please check your account details and try again.
                 </div>
             {% endif %}
 
@@ -268,7 +268,7 @@
                         type="text"
                         name="username"
                         id="id_username"
-                        placeholder="Masukkan username"
+                        placeholder="Enter your username"
                         autocomplete="username"
                         maxlength="150"
                         value="{{ request.POST.username|default_if_none:'' }}"
@@ -293,7 +293,7 @@
                         type="password"
                         name="password"
                         id="id_password"
-                        placeholder="Masukkan password"
+                        placeholder="Enter your password"
                         autocomplete="current-password"
                         required
                     >
@@ -307,18 +307,18 @@
                 </div>
 
                 <button type="submit" class="login-button">
-                    Masuk ke Dashboard
+                    Log in to Dashboard
                 </button>
             </form>
 
             <p class="security-note">
-                Halaman khusus administrator.<br>
-                Jaga kerahasiaan username dan password Anda.
+                This page is for administrators only.<br>
+                Keep your username and password confidential.
             </p>
         </section>
 
         <a href="/" class="back-link">
-            ← Kembali ke halaman utama
+            ← Back to home
         </a>
 
         <footer class="footer">

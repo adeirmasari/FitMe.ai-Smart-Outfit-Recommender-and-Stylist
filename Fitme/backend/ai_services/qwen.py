@@ -135,7 +135,7 @@ class QwenVLProvider(VisionProvider):
         return body, choice, text
 
     def check_clothing(self, image_bytes):
-        """Pemeriksaan singkat sebelum foto disimpan ke Digital Wardrobe."""
+        """Check the photo before saving it to the Digital Wardrobe."""
         if not self.is_configured():
             raise ProviderNotConfigured("QWEN_API_BASE / QWEN_MODEL not set")
         payload = self._chat_payload(

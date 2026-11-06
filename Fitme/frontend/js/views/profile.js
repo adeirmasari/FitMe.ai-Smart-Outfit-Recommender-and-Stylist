@@ -24,21 +24,21 @@ export async function renderProfile(ctx) {
   session.setProfile(profile);
 
   const fields = {
-    display_name: field("display_name", "Nama tampilan", { maxlength: 60, value: profile.display_name, autocomplete: "nickname" }),
+    display_name: field("display_name", "Display name", { maxlength: 60, value: profile.display_name, autocomplete: "nickname" }),
     email: field("email", "Email", { type: "email", maxlength: 254, value: profile.email, autocomplete: "email" }),
-    style_notes: field("style_notes", "Catatan gaya", {
+    style_notes: field("style_notes", "Style notes", {
       maxlength: 300,
       value: profile.style_notes,
       multiline: true,
-      hint: "Mengisi otomatis kolom catatan tambahan pada analisis baru. Maksimal 300 karakter.",
+      hint: "Automatically fills in the additional notes for new analyses. Maximum 300 characters.",
     }),
   };
-  const saveBtn = h("button", { class: "btn", type: "submit" }, "Simpan perubahan");
+  const saveBtn = h("button", { class: "btn", type: "submit" }, "Save changes");
   const alert = h("div", { class: "alert", role: "alert", hidden: true });
   const form = h(
     "form",
     { novalidate: true, "aria-labelledby": "edit-heading" },
-    h("h2", { id: "edit-heading", style: { fontSize: "var(--step-2)" } }, "Ubah profil"),
+    h("h2", { id: "edit-heading", style: { fontSize: "var(--step-2)" } }, "Edit profile"),
     alert,
     fields.display_name.wrap,
     fields.email.wrap,
@@ -54,13 +54,13 @@ export async function renderProfile(ctx) {
     Object.values(fields).forEach((f) => f.setError(""));
     const email = fields.email.control;
     if (!email.value.trim() || !email.checkValidity()) {
-      fields.email.setError("Masukkan alamat email yang valid.");
+      fields.email.setError("Enter a valid email address.");
       email.focus();
       return;
     }
     busy = true;
     saveBtn.disabled = true;
-    saveBtn.replaceChildren(spinner(), " Menyimpan…");
+    saveBtn.replaceChildren(spinner(), " Saving…");
     try {
       const updated = await request("/api/profile/", {
         method: "PATCH",
@@ -73,7 +73,7 @@ export async function renderProfile(ctx) {
       session.setProfile(updated);
       fields.display_name.control.value = updated.display_name;
       fields.style_notes.control.value = updated.style_notes;
-      toast("Profil berhasil disimpan.");
+      toast("Profile saved.");
     } catch (error) {
       let shown = false;
       for (const [key, f] of Object.entries(fields)) {
@@ -89,11 +89,11 @@ export async function renderProfile(ctx) {
     } finally {
       busy = false;
       saveBtn.disabled = false;
-      saveBtn.textContent = "Simpan perubahan";
+      saveBtn.textContent = "Save changes";
     }
   });
 
-  const logoutBtn = h("button", { class: "btn btn-ghost", type: "button" }, "Keluar");
+  const logoutBtn = h("button", { class: "btn btn-ghost", type: "button" }, "Log out");
   logoutBtn.addEventListener("click", async () => {
     logoutBtn.disabled = true;
     try {
@@ -101,7 +101,7 @@ export async function renderProfile(ctx) {
     } catch {
       /* local session already cleared */
     }
-    toast("Kamu telah keluar.");
+    toast("You have been logged out.");
     ctx.navigate("/", { replace: true });
   });
 
@@ -111,8 +111,8 @@ export async function renderProfile(ctx) {
     h(
       "div",
       { class: "page-head" },
-      h("div", {}, h("p", { class: "eyebrow" }, "Akun"), h("h1", {}, profile.display_name || profile.username)),
-      h("a", { class: "btn btn-accent", href: "/analyze" }, "Kembali ke analisis"),
+      h("div", {}, h("p", { class: "eyebrow" }, "Account"), h("h1", {}, profile.display_name || profile.username)),
+      h("a", { class: "btn btn-accent", href: "/analyze" }, "Back to analysis"),
     ),
     h(
       "div",
@@ -123,9 +123,9 @@ export async function renderProfile(ctx) {
         h(
           "dl",
           {},
-          h("div", {}, h("dt", {}, "Nama pengguna"), h("dd", {}, profile.username)),
-          h("div", {}, h("dt", {}, "Bergabung sejak"), h("dd", {}, formatDate(profile.date_joined))),
-          h("div", {}, h("dt", {}, "Jumlah analisis"), h("dd", {}, h("a", { href: "/history" }, String(profile.analysis_count)))),
+          h("div", {}, h("dt", {}, "Username"), h("dd", {}, profile.username)),
+          h("div", {}, h("dt", {}, "Member since"), h("dd", {}, formatDate(profile.date_joined))),
+          h("div", {}, h("dt", {}, "Analyses"), h("dd", {}, h("a", { href: "/history" }, String(profile.analysis_count)))),
         ),
         h("div", {}, logoutBtn),
       ),

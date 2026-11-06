@@ -43,16 +43,16 @@ export function onSessionExpired(handler) {
 }
 
 const FALLBACK_MESSAGES = {
-  0: "Tidak dapat terhubung ke FitMe.ai. Periksa koneksi internet lalu coba lagi.",
-  401: "Sesi berakhir. Silakan masuk kembali.",
-  403: "Anda tidak memiliki akses ke halaman ini.",
-  404: "Data yang dicari tidak ditemukan.",
-  413: "Ukuran file terlalu besar.",
-  429: "Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.",
-  500: "Terjadi gangguan pada server. Silakan coba lagi.",
-  502: "Layanan AI sedang mengalami gangguan. Silakan coba lagi.",
-  503: "Layanan AI belum tersedia saat ini.",
-  504: "AI membutuhkan waktu terlalu lama untuk merespons.",
+  0: "Could not connect to FitMe.ai. Check your internet connection and try again.",
+  401: "Your session has expired. Please log in again.",
+  403: "You do not have access to this page.",
+  404: "The requested data could not be found.",
+  413: "The file is too large.",
+  429: "Too many requests. Wait a moment and try again.",
+  500: "The server encountered an error. Please try again.",
+  502: "The AI service is experiencing issues. Please try again.",
+  503: "The AI service is currently unavailable.",
+  504: "The AI service took too long to respond.",
 };
 
 /** Turn any response body into an ApiError with a human message. */
@@ -181,7 +181,7 @@ export function upload(path, formData, { onProgress, onUploaded, signal } = {}) 
       xhr.ontimeout = () => reject(new ApiError({
         status: 0,
         code: "timeout",
-        message: "Pengiriman atau analisis terlalu lama. Periksa Riwayat sebelum mengirim ulang.",
+        message: "The upload or analysis took too long. Check your history before trying again.",
       }));
       xhr.onabort = () => reject(new DOMException("Aborted", "AbortError"));
       signal?.addEventListener("abort", () => xhr.abort(), { once: true });

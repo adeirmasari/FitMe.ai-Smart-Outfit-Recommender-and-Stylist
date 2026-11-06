@@ -5,7 +5,7 @@ export function renderNotFound() {
     "div",
     { class: "center-state" },
     h("p", { class: "eyebrow" }, "404"),
-    h("h1", { style: { fontSize: "var(--step-3)" } }, "Halaman ini tidak ditemukan"),
-    h("a", { class: "btn btn-ghost", href: "/" }, "Kembali ke FitMe.ai"),
+    h("h1", { style: { fontSize: "var(--step-3)" } }, "This page could not be found"),
+    h("a", { class: "btn btn-ghost", href: "/" }, "Back to FitMe.ai"),
   );
 }
