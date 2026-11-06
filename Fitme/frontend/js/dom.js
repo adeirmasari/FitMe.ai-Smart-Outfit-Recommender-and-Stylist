@@ -33,7 +33,7 @@ export function clear(el) {
 export function formatDate(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function spinner() {
@@ -54,9 +54,9 @@ export function toast(message, { error = false, timeout = 4000 } = {}) {
 }
 
 /** Accessible confirm dialog built on <dialog>. Resolves true/false. */
-export function confirmDialog({ title, body, confirmLabel = "Confirm", danger = false }) {
+export function confirmDialog({ title, body, confirmLabel = "Konfirmasi", danger = false }) {
   return new Promise((resolve) => {
-    const cancel = h("button", { class: "btn btn-ghost", type: "button", value: "cancel" }, "Cancel");
+    const cancel = h("button", { class: "btn btn-ghost", type: "button", value: "cancel" }, "Batal");
     const ok = h("button", { class: `btn ${danger ? "btn-accent" : ""}`, type: "button", value: "ok" }, confirmLabel);
     const titleId = `dlg-${Math.random().toString(36).slice(2)}`;
     const dialog = h(

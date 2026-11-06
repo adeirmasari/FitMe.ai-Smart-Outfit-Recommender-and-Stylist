@@ -24,6 +24,34 @@ function block(title, eyebrow, ...content) {
   );
 }
 
+function occasionName(analysis) {
+  const labels = {
+    casual: "Kasual",
+    campus: "Kampus",
+    work: "Kerja",
+    formal: "Acara formal",
+    party: "Pesta",
+    other: "Lainnya",
+  };
+  return analysis.occasion === "other" && analysis.occasion_detail
+    ? `Lainnya: ${analysis.occasion_detail}`
+    : labels[analysis.occasion] || analysis.occasion_label;
+}
+
+function clothingCategory(category) {
+  const labels = {
+    top: "Atasan",
+    bottom: "Bawahan",
+    outerwear: "Pakaian luar",
+    dress: "Gaun",
+    footwear: "Alas kaki",
+    accessory: "Aksesori",
+    bag: "Tas",
+    other: "Lainnya",
+  };
+  return labels[category] || category;
+}
+
 function sourceBadge(source) {
   if (!source) return null;
 
@@ -31,7 +59,7 @@ function sourceBadge(source) {
     return h(
       "span",
       { class: "source-badge mock" },
-      "Development mock — not AI output",
+      "Data uji — bukan hasil AI",
     );
   }
 
@@ -63,7 +91,7 @@ function observations(rec) {
         h(
           "caption",
           { class: "visually-hidden" },
-          "Detected clothing items",
+          "Pakaian yang terdeteksi",
         ),
         h(
           "thead",
@@ -71,9 +99,9 @@ function observations(rec) {
           h(
             "tr",
             {},
-            h("th", { scope: "col" }, "Item"),
-            h("th", { scope: "col" }, "Colour"),
-            h("th", { scope: "col" }, "Details"),
+            h("th", { scope: "col" }, "Pakaian"),
+            h("th", { scope: "col" }, "Warna"),
+            h("th", { scope: "col" }, "Detail"),
           ),
         ),
         h(
@@ -91,7 +119,7 @@ function observations(rec) {
                   ? h(
                       "span",
                       { class: "muted" },
-                      ` · ${item.category}`,
+                      ` · ${clothingCategory(item.category)}`,
                     )
                   : null,
               ),
@@ -110,7 +138,7 @@ function observations(rec) {
         "ul",
         {
           class: "swatches",
-          "aria-label": "Dominant colours",
+          "aria-label": "Warna utama",
         },
         rec.dominant_colors.map((color) => {
           const hex = safeHex(color.hex);
@@ -130,7 +158,7 @@ function observations(rec) {
             h(
               "span",
               {},
-              color.name || hex || "Unnamed",
+              color.name || hex || "Tanpa nama",
             ),
             hex
               ? h(
@@ -163,8 +191,8 @@ function observations(rec) {
   }
 
   return block(
-    "What the model sees",
-    "Observations",
+    "Hasil pengamatan",
+    "Pengamatan",
     ...parts,
   );
 }
@@ -177,7 +205,7 @@ function recommendations(rec, occasionLabel) {
       h(
         "p",
         { class: "eyebrow" },
-        "Primary recommendation",
+        "Rekomendasi utama",
       ),
       h(
         "p",
@@ -191,7 +219,7 @@ function recommendations(rec, occasionLabel) {
             h(
               "strong",
               {},
-              `Why it works for ${occasionLabel.toLowerCase()}: `,
+              `Alasan cocok untuk ${occasionLabel.toLowerCase()}: `,
             ),
             rec.occasion_rationale,
           )
@@ -202,7 +230,7 @@ function recommendations(rec, occasionLabel) {
   if (rec.color_suggestions.length) {
     out.push(
       block(
-        "Colour pairings",
+        "Paduan warna",
         null,
         h(
           "ul",
@@ -235,8 +263,8 @@ function recommendations(rec, occasionLabel) {
   if (rec.alternative_outfits.length) {
     out.push(
       block(
-        "Alternatives",
-        "Optional",
+        "Alternatif",
+        "Opsional",
         h(
           "ul",
           { class: "alts" },
@@ -301,7 +329,7 @@ function wardrobeOutfits(rec, ctx) {
           frame.replaceChildren(
             h("img", {
               src: url,
-              alt: item.name,
+              alt: `${item.category === "top" ? "Atasan" : "Bawahan"}: ${item.name}`,
               loading: "lazy",
             }),
           );
@@ -312,7 +340,7 @@ function wardrobeOutfits(rec, ctx) {
               h(
                 "p",
                 { class: "muted small" },
-                "Foto tidak tersedia; pakaian mungkin sudah dihapus.",
+                "Foto tidak tersedia. Pakaian mungkin sudah dihapus.",
               ),
             );
           }
@@ -329,7 +357,10 @@ function wardrobeOutfits(rec, ctx) {
 
     return h(
       "article",
-      { class: "result-block" },
+      {
+        class: "wardrobe-result-item",
+        dataset: { wardrobeItemId: item.wardrobe_item_id || "" },
+      },
       h(
         "p",
         { class: "eyebrow" },
@@ -338,11 +369,11 @@ function wardrobeOutfits(rec, ctx) {
           : "BAWAHAN",
       ),
       frame,
-      h("h3", {}, item.name),
+      h("h3", {}, item.name || "Pakaian tanpa nama"),
       h(
         "p",
-        { class: "small muted" },
-        `ID: ${item.wardrobe_item_id}`,
+        { class: "small wardrobe-item-id" },
+        `ID pakaian: ${item.wardrobe_item_id || "tidak tersedia"}`,
       ),
       item.color
         ? h(
@@ -360,18 +391,18 @@ function wardrobeOutfits(rec, ctx) {
 
   if (!outfits.length) {
     return block(
-      "Outfit dari Digital Wardrobe",
+      "Rekomendasi dari Lemari Digital",
       null,
       h(
         "p",
         { class: "muted" },
-        "Data outfit belum tersedia. Coba buat rekomendasi kembali.",
+        "Data pakaian rekomendasi belum tersedia. Coba buat rekomendasi kembali.",
       ),
     );
   }
 
   return block(
-    "Outfit dari Digital Wardrobe",
+    "Rekomendasi dari Lemari Digital",
     null,
     ...outfits.map((outfit) =>
       h(
@@ -397,6 +428,7 @@ function wardrobeOutfits(rec, ctx) {
         h(
           "p",
           { class: "why" },
+          h("strong", {}, "Alasan rekomendasi: "),
           outfit.reason,
         ),
       ),
@@ -432,12 +464,12 @@ export async function renderResult(ctx) {
                 fontSize: "var(--step-3)",
               },
             },
-            "Analysis not found",
+            "Analisis tidak ditemukan",
           ),
           h(
             "p",
             { class: "muted" },
-            "It may have been deleted, or it belongs to another account.",
+            "Data mungkin telah dihapus atau bukan milik akun ini.",
           ),
           h(
             "a",
@@ -445,7 +477,7 @@ export async function renderResult(ctx) {
               class: "btn btn-ghost",
               href: "/history",
             },
-            "Back to history",
+            "Kembali ke riwayat",
           ),
         );
       }
@@ -454,7 +486,7 @@ export async function renderResult(ctx) {
     }
   }
 
-  // Foto analisis atau kolase Digital Wardrobe
+  // Foto analisis atau kolase Lemari Digital
   const frame = h(
     "div",
     { class: "frame" },
@@ -462,7 +494,7 @@ export async function renderResult(ctx) {
       "span",
       { class: "loading-line" },
       spinner(),
-      "Loading photo…",
+      "Memuat foto…",
     ),
   );
 
@@ -480,8 +512,8 @@ export async function renderResult(ctx) {
           src: url,
           alt:
             analysis.source === "wardrobe"
-              ? "Kolase foto Digital Wardrobe"
-              : `Submitted outfit photo for ${analysis.occasion_label}`,
+              ? "Kolase foto Lemari Digital"
+              : `Foto pakaian untuk acara ${occasionName(analysis)}`,
         }),
       );
     })
@@ -491,7 +523,7 @@ export async function renderResult(ctx) {
           h(
             "p",
             { class: "muted small" },
-            "The photo couldn't be loaded.",
+            "Foto tidak dapat dimuat.",
           ),
         );
       }
@@ -507,11 +539,11 @@ export async function renderResult(ctx) {
 
   const prefs = [
     analysis.preferred_style &&
-      `Style: ${analysis.preferred_style}`,
+    `Gaya: ${analysis.preferred_style}`,
     analysis.desired_impression &&
-      `Impression: ${analysis.desired_impression}`,
+      `Kesan: ${analysis.desired_impression}`,
     analysis.additional_context &&
-      `Notes: ${analysis.additional_context}`,
+      `Catatan: ${analysis.additional_context}`,
   ].filter(Boolean);
 
   const photo = h(
@@ -541,17 +573,17 @@ export async function renderResult(ctx) {
       type: "button",
       class: "btn btn-danger",
     },
-    "Delete",
+    "Hapus",
   );
 
   deleteBtn.addEventListener("click", async () => {
     if (busy) return;
 
     const ok = await confirmDialog({
-      title: "Delete this analysis?",
+      title: "Hapus analisis ini?",
       body:
-        "The photo and its recommendations will be permanently removed.",
-      confirmLabel: "Delete",
+        "Foto dan rekomendasinya akan dihapus secara permanen.",
+      confirmLabel: "Hapus",
       danger: true,
     });
 
@@ -566,7 +598,7 @@ export async function renderResult(ctx) {
         { method: "DELETE" },
       );
 
-      toast("Analysis deleted.");
+      toast("Analisis berhasil dihapus.");
       ctx.navigate("/history", {
         replace: true,
       });
@@ -589,7 +621,7 @@ export async function renderResult(ctx) {
         class: "btn",
         href: "/analyze",
       },
-      "Analyze another outfit",
+      "Analisis pakaian lain",
     ),
     h(
       "a",
@@ -597,7 +629,7 @@ export async function renderResult(ctx) {
         class: "btn btn-ghost",
         href: "/history",
       },
-      "History",
+      "Riwayat",
     ),
     deleteBtn,
   );
@@ -614,7 +646,7 @@ export async function renderResult(ctx) {
     h(
       "p",
       { class: "eyebrow" },
-      analysis.occasion_label,
+      occasionName(analysis),
     ),
     h(
       "h1",
@@ -625,13 +657,13 @@ export async function renderResult(ctx) {
       },
       analysis.status === "completed"
         ? analysis.source === "wardrobe"
-          ? "Rekomendasi Digital Wardrobe"
-          : "Your outfit analysis"
+          ? "Rekomendasi Lemari Digital"
+          : "Hasil analisis pakaian"
         : analysis.status === "failed"
           ? analysis.error?.code === "image_not_clothing"
             ? "Foto ditolak"
-            : "The analysis didn't finish"
-          : "Still processing",
+            : "Analisis belum selesai"
+          : "Sedang diproses",
     ),
     analysis.recommendation
       ? h(
@@ -671,14 +703,14 @@ export async function renderResult(ctx) {
                     h(
                       "strong",
                       {},
-                      "This is a development fixture.",
+                      "Ini adalah data uji pengembangan.",
                     ),
-                    "No vision model analyzed this photo. Configure AI_PROVIDER=gemini for real results.",
+                    "Foto ini tidak dianalisis oleh AI. Atur AI_PROVIDER untuk mendapatkan hasil dari model AI.",
                   )
                 : null,
               ...recommendations(
                 rec,
-                analysis.occasion_label,
+                occasionName(analysis),
               ),
               observations(rec),
             ]
@@ -693,7 +725,7 @@ export async function renderResult(ctx) {
               h(
                 "h2",
                 {},
-                "Limitations",
+                "Batasan",
               ),
               h(
                 "ul",
@@ -714,8 +746,8 @@ export async function renderResult(ctx) {
         "p",
         { class: "small muted" },
         analysis.source === "wardrobe"
-          ? "Rekomendasi berdasarkan hingga 12 foto dari Digital Wardrobe."
-          : "Suggestions are generated by a vision-language model from a single photo. Treat them as a starting point, not a verdict.",
+          ? "Rekomendasi dibuat dari maksimal 12 foto di Lemari Digital."
+          : "Saran dibuat oleh model AI dari satu foto. Gunakan sebagai pertimbangan, bukan keputusan mutlak.",
       ),
     ];
   } else if (
@@ -739,7 +771,7 @@ export async function renderResult(ctx) {
           "span",
           { style: { display: "block", marginTop: "var(--space-2)" } },
           err.guidance ||
-            "Ganti dengan foto yang menampilkan pakaian atau outfit secara jelas.",
+            "Ganti dengan foto yang menampilkan pakaian dengan jelas.",
         ),
       ),
       h(
@@ -759,7 +791,7 @@ export async function renderResult(ctx) {
   } else if (analysis.status === "failed") {
     const err =
       analysis.error || {
-        message: "The analysis failed.",
+        message: "Analisis gagal diselesaikan.",
         retryable: true,
       };
 
@@ -770,7 +802,7 @@ export async function renderResult(ctx) {
             type: "button",
             class: "btn btn-accent",
           },
-          "Retry analysis",
+          "Coba lagi",
         )
       : null;
 
@@ -788,13 +820,13 @@ export async function renderResult(ctx) {
         retryBtn.disabled = true;
         retryBtn.replaceChildren(
           spinner(),
-          " Retrying…",
+          " Mencoba lagi…",
         );
 
         retryStatus.textContent =
           analysis.source === "wardrobe"
-            ? "Gemini sedang menyusun ulang kombinasi dari koleksi pakaianmu…"
-            : "Sending the same photo to the model again. This can take up to a minute.";
+            ? "Menyusun ulang kombinasi dari koleksi pakaian…"
+            : "Mengirim ulang foto ke AI. Proses ini dapat memerlukan waktu hingga satu menit.";
 
         try {
           const updated = await request(
@@ -840,8 +872,7 @@ export async function renderResult(ctx) {
             error.message;
           busy = false;
           retryBtn.disabled = false;
-          retryBtn.textContent =
-            "Retry analysis";
+          retryBtn.textContent = "Coba lagi";
         }
       },
     );
@@ -860,9 +891,9 @@ export async function renderResult(ctx) {
         ),
         err.retryable
           ? analysis.source === "wardrobe"
-            ? "Foto koleksi tersimpan, sehingga kamu dapat mencoba rekomendasi lagi."
-            : "Your photo is saved, so you can retry without uploading it again."
-          : "Try again later or start a new analysis.",
+            ? "Foto koleksi tersimpan. Kamu dapat mencoba rekomendasi lagi."
+            : "Foto tersimpan. Kamu dapat mencoba lagi tanpa mengunggah ulang."
+          : "Coba periksa kembali ketersediaan AI atau mulai analisis baru.",
         h(
           "span",
           {
@@ -873,7 +904,7 @@ export async function renderResult(ctx) {
                 "var(--space-2)",
             },
           },
-          `Error code: ${err.code} · Attempts: ${analysis.attempt_count}`,
+          `Kode gangguan: ${err.code} · Percobaan: ${analysis.attempt_count}`,
         ),
       ),
       retryBtn
@@ -883,6 +914,17 @@ export async function renderResult(ctx) {
               class: "result-actions",
             },
             retryBtn,
+          )
+        : null,
+      err.code === "provider_not_configured"
+        ? h(
+            "div",
+            { class: "result-actions" },
+            h(
+              "a",
+              { class: "btn btn-ghost", href: "/analyze" },
+              "Periksa status AI",
+            ),
           )
         : null,
       retryStatus,
@@ -897,9 +939,9 @@ export async function renderResult(ctx) {
         h(
           "strong",
           {},
-          "This analysis is still being processed.",
+          "Analisis masih diproses.",
         ),
-        "Refresh in a moment to see the result.",
+        "Perbarui status sebentar lagi untuk melihat hasilnya.",
         h(
           "div",
           {
@@ -918,7 +960,7 @@ export async function renderResult(ctx) {
                   },
                 ),
             },
-            "Refresh",
+            "Perbarui status",
           ),
         ),
       ),

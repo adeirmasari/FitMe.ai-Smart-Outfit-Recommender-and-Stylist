@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 5
 
 ERROR_MESSAGES = {
-    "processing_interrupted": ("Processing was interrupted before it finished. You can retry this analysis.", True),
-    "internal_error": ("Something went wrong while saving the result. You can retry this analysis.", True),
+    "processing_interrupted": ("Proses terhenti sebelum selesai. Kamu dapat mencoba analisis ini lagi.", True),
+    "internal_error": ("Terjadi gangguan saat menyimpan hasil. Kamu dapat mencoba analisis ini lagi.", True),
 }
 
 

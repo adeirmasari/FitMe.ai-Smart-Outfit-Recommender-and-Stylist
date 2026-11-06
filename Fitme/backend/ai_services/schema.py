@@ -259,7 +259,7 @@ def normalize_wardrobe_result(raw, catalog):
         seen.add(pair)
 
         outfits.append({
-            "title": _clean(entry.get("title"), 100) or f"Outfit {index}",
+            "title": _clean(entry.get("title"), 100) or f"Paduan {index}",
             "reason": reason,
             "top_id": top["id"],
             "bottom_id": bottom["id"],

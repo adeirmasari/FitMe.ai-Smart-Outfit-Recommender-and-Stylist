@@ -56,68 +56,86 @@ def run(base, shots, headed):
 
         def landing():
             page.goto(base + "/")
-            expect(page.get_by_role("heading", level=1)).to_contain_text("walking into")
-            expect(page.get_by_role("link", name="Create account")).to_be_visible()
+            expect(page.get_by_role("heading", level=1)).to_contain_text("Kenakan pakaian")
+            expect(page.get_by_role("link", name="Buat akun", exact=True)).to_be_visible()
             page.screenshot(path=shots / "01-landing-desktop.png", full_page=True)
 
         def register():
-            page.get_by_role("link", name="Analyze an outfit").first.click()
+            page.get_by_role("link", name="Analisis pakaian").first.click()
             expect(page).to_have_url(base + "/register")
-            page.get_by_role("button", name="Create account").click()
+            page.get_by_role("button", name="Buat akun").click()
             expect(page.locator("#username[aria-invalid=true]")).to_be_visible()
             page.fill("#username", user_a)
             page.fill("#email", f"{user_a}@example.com")
             page.fill("#password", "12345678")
-            page.get_by_role("button", name="Create account").click()
+            page.get_by_role("button", name="Buat akun").click()
             expect(page.locator("#password-msg")).to_contain_text("numeric")
             page.fill("#password", PASSWORD)
-            page.get_by_role("button", name="Create account").click()
+            page.get_by_role("button", name="Buat akun").click()
             expect(page).to_have_url(base + "/analyze")
-            expect(page.get_by_role("button", name="Sign out")).to_be_visible()
+            expect(page.get_by_role("button", name="Keluar")).to_be_visible()
 
         def analyze_validation():
-            expect(page.get_by_text("Development mock mode.")).to_be_visible()
-            page.get_by_role("button", name="Analyze outfit").click()
-            expect(page.locator("#photo-error")).to_contain_text("Choose a photo")
-            expect(page.get_by_text("Choose the occasion")).to_be_visible()
+            expect(page.get_by_text("Mode data uji aktif.")).to_be_visible()
+            page.get_by_role("button", name="Buat rekomendasi").click()
+            expect(page.locator("#photo-error")).to_contain_text("Pilih foto")
+            expect(page.get_by_text("Pilih acara yang akan dihadiri.")).to_be_visible()
             small = shots / "_tiny.png"
             tiny_png(small)
             page.set_input_files("#photo", str(small))
-            expect(page.locator("#photo-error")).to_contain_text("too small")
+            expect(page.locator("#photo-error")).to_contain_text("terlalu kecil")
             small.unlink()
             page.set_input_files("#photo", {"name": "notes.txt", "mimeType": "text/plain", "buffer": b"hello"})
-            expect(page.locator("#photo-error")).to_contain_text("JPEG, PNG or WebP")
+            expect(page.locator("#photo-error")).to_contain_text("JPEG, PNG, atau WebP")
 
         def analyze_submit():
             page.locator(".samples button").first.click()
             expect(page.locator(".preview img")).to_be_visible()
-            expect(page.locator(".file-meta")).to_contain_text("Dataset sample")
-            page.get_by_role("radio", name="Other").check()
+            expect(page.locator(".file-meta")).to_contain_text("Contoh dataset")
+            page.get_by_role("radio", name="Lainnya").check()
             expect(page.locator("#occasion_detail")).to_be_visible()
-            page.get_by_role("radio", name="Work").check()
+            page.get_by_role("radio", name="Kerja").check()
             expect(page.locator("#occasion_detail")).to_be_hidden()
             page.fill("#preferred_style", "minimal")
             page.screenshot(path=shots / "02-analyze-desktop.png", full_page=True)
             requests = []
             page.on("request", lambda r: requests.append(r.url) if r.method == "POST" and r.url.endswith("/api/analyses/") else None)
-            # Two submits in the same tick: the second must be ignored.
+            failed_posts = {"count": 0}
+
+            def fail_first_post(route):
+                if route.request.method == "POST" and failed_posts["count"] == 0:
+                    failed_posts["count"] += 1
+                    route.abort()
+                else:
+                    route.continue_()
+
+            page.route("**/api/analyses/", fail_first_post)
+            # Two submits in the same tick must produce only one request.
             page.evaluate("() => { const f = document.querySelector('form.brief'); f.requestSubmit(); f.requestSubmit(); }")
+            expect(page.locator(".form-alert")).to_be_visible()
+            expect(page.locator(".form-alert")).to_contain_text("Koneksi ke server terputus")
+            expect(page.get_by_role("button", name="Coba lagi")).to_be_visible()
+            expect(page.get_by_role("button", name="Buat rekomendasi")).to_be_enabled()
+            expect(page.locator(".preview img")).to_be_visible()
+            assert len(requests) == 1, f"expected one failed POST, saw {len(requests)}"
+            page.unroute("**/api/analyses/", fail_first_post)
+            page.get_by_role("button", name="Coba lagi").click()
             expect(page).to_have_url(re.compile(r".*/analyses/[0-9a-f-]{36}$"), timeout=20000)
             state["result_url"] = page.url
-            assert len(requests) == 1, f"expected one POST, saw {len(requests)}"
+            assert len(requests) == 2, f"expected one retry after a failed POST, saw {len(requests)}"
 
         def result_render():
-            expect(page.get_by_role("heading", name="Your outfit analysis")).to_be_visible()
-            expect(page.locator(".source-badge.mock")).to_contain_text("not AI output")
-            expect(page.get_by_text("Primary recommendation")).to_be_visible()
+            expect(page.get_by_role("heading", name="Hasil analisis pakaian")).to_be_visible()
+            expect(page.locator(".source-badge.mock")).to_contain_text("bukan hasil AI")
+            expect(page.get_by_text("Rekomendasi utama")).to_be_visible()
             expect(page.locator(".result-photo img")).to_be_visible()
             expect(page.locator(".swatches li").first).to_be_visible()
             page.screenshot(path=shots / "03-result-desktop.png", full_page=True)
 
         def refresh_keeps_session():
             page.reload()
-            expect(page.get_by_role("heading", name="Your outfit analysis")).to_be_visible()
-            expect(page.get_by_role("button", name="Sign out")).to_be_visible()
+            expect(page.get_by_role("heading", name="Hasil analisis pakaian")).to_be_visible()
+            expect(page.get_by_role("button", name="Keluar")).to_be_visible()
 
         def expired_access_token_refreshes():
             calls = {"n": 0}
@@ -131,7 +149,7 @@ def run(base, shots, headed):
 
             page.route("**/api/analyses/?*", fake_401)
             page.route("**/api/analyses/", fake_401)
-            page.get_by_role("link", name="History", exact=True).first.click()
+            page.get_by_role("link", name="Riwayat", exact=True).first.click()
             expect(page.locator(".history-item")).to_have_count(1)
             assert calls["n"] >= 2, "request was not retried after refresh"
             page.unroute("**/api/analyses/?*")
@@ -149,37 +167,59 @@ def run(base, shots, headed):
             p2.fill("#username", user_b)
             p2.fill("#email", f"{user_b}@example.com")
             p2.fill("#password", PASSWORD)
-            p2.get_by_role("button", name="Create account").click()
+            p2.get_by_role("button", name="Buat akun").click()
             expect(p2).to_have_url(base + "/analyze")
             p2.goto(state["result_url"])
-            expect(p2.get_by_role("heading", name="Analysis not found")).to_be_visible()
+            expect(p2.get_by_role("heading", name="Analisis tidak ditemukan")).to_be_visible()
             p2.goto(base + "/history")
-            expect(p2.get_by_role("heading", name="No analyses yet")).to_be_visible()
+            expect(p2.get_by_role("heading", name="Belum ada analisis")).to_be_visible()
             other.close()
 
         def profile_edit():
-            page.get_by_role("link", name="Profile").click()
+            page.get_by_role("link", name="Profil").click()
             page.fill("#display_name", "Ana Stylist")
             page.fill("#style_notes", "Neutral palette, no heels")
-            page.get_by_role("button", name="Save changes").click()
-            expect(page.locator(".toast")).to_contain_text("Profile saved")
+            page.get_by_role("button", name="Simpan perubahan").click()
+            expect(page.locator(".toast")).to_contain_text("Profil berhasil disimpan")
             page.fill("#email", "broken")
-            page.get_by_role("button", name="Save changes").click()
-            expect(page.locator("#email-msg")).to_contain_text("valid email")
+            page.get_by_role("button", name="Simpan perubahan").click()
+            expect(page.locator("#email-msg")).to_contain_text("email yang valid")
             page.goto(base + "/analyze")
             expect(page.locator("#additional_context")).to_have_value("Neutral palette, no heels")
 
+        def wardrobe_flow():
+            page.goto(base + "/wardrobe")
+            expect(page.get_by_role("heading", name="Lemari Digital")).to_be_visible()
+            page.get_by_role("button", name="+ Tambah pakaian").click()
+            dialog = page.get_by_role("dialog")
+            dialog.locator("input[name=name]").fill("Kemeja putih")
+            dialog.locator("select[name=category]").select_option("top")
+            photo = Path(__file__).resolve().parents[1] / "frontend" / "assets" / "samples" / "0000080.jpg"
+            dialog.locator("input[name=image]").set_input_files(str(photo))
+            dialog.get_by_role("button", name="Unggah pakaian").click()
+            expect(page.locator(".wardrobe-card h2")).to_contain_text("Kemeja putih")
+
+            page.locator(".wardrobe-card").get_by_role("button", name="Edit").click()
+            dialog = page.get_by_role("dialog")
+            dialog.locator("input[name=name]").fill("Kemeja putih uji")
+            dialog.get_by_role("button", name="Simpan perubahan").click()
+            expect(page.locator(".wardrobe-card h2")).to_contain_text("Kemeja putih uji")
+
+            page.once("dialog", lambda prompt: prompt.accept())
+            page.locator(".wardrobe-card").get_by_role("button", name="Hapus").click()
+            expect(page.get_by_role("heading", name="Lemari kamu masih kosong")).to_be_visible()
+
         def delete_flow():
             page.goto(base + "/history")
-            page.get_by_role("button", name=re.compile("Delete analysis")).first.click()
-            page.get_by_role("dialog").get_by_role("button", name="Cancel").click()
+            page.get_by_role("button", name=re.compile("Hapus analisis")).first.click()
+            page.get_by_role("dialog").get_by_role("button", name="Batal").click()
             expect(page.locator(".history-item")).to_have_count(1)
-            page.get_by_role("button", name=re.compile("Delete analysis")).first.click()
-            page.get_by_role("dialog").get_by_role("button", name="Delete").click()
-            expect(page.get_by_role("heading", name="No analyses yet")).to_be_visible()
+            page.get_by_role("button", name=re.compile("Hapus analisis")).first.click()
+            page.get_by_role("dialog").get_by_role("button", name="Hapus").click()
+            expect(page.get_by_role("heading", name="Belum ada analisis")).to_be_visible()
 
         def logout_and_guard():
-            page.get_by_role("button", name="Sign out").click()
+            page.get_by_role("button", name="Keluar").click()
             expect(page).to_have_url(base + "/")
             page.goto(base + "/history")
             expect(page).to_have_url(re.compile(r".*/login\?next=%2Fhistory$"))
@@ -187,10 +227,10 @@ def run(base, shots, headed):
         def login_flow():
             page.fill("#username", user_a)
             page.fill("#password", "wrong-password-9")
-            page.get_by_role("button", name="Sign in").click()
+            page.get_by_role("button", name="Masuk").click()
             expect(page.get_by_role("alert")).to_contain_text("Incorrect")
             page.fill("#password", PASSWORD)
-            page.get_by_role("button", name="Sign in").click()
+            page.get_by_role("button", name="Masuk").click()
             expect(page).to_have_url(base + "/history")
 
         def mobile():
@@ -200,19 +240,19 @@ def run(base, shots, headed):
             assert no_horizontal_scroll(mp), "landing scrolls horizontally"
             mp.screenshot(path=shots / "05-landing-mobile.png", full_page=True)
             mp.get_by_role("button", name="Menu").click()
-            expect(mp.locator("#site-nav").get_by_role("link", name="Sign in")).to_be_visible()
-            mp.locator("#site-nav").get_by_role("link", name="Sign in").click()
+            expect(mp.locator("#site-nav").get_by_role("link", name="Masuk")).to_be_visible()
+            mp.locator("#site-nav").get_by_role("link", name="Masuk").click()
             mp.fill("#username", user_a)
             mp.fill("#password", PASSWORD)
-            mp.get_by_role("button", name="Sign in").click()
+            mp.get_by_role("button", name="Masuk").click()
             expect(mp).to_have_url(base + "/analyze")
-            expect(mp.get_by_role("button", name="Take photo")).to_be_visible()
+            expect(mp.get_by_role("button", name="Ambil foto")).to_be_visible()
             assert no_horizontal_scroll(mp), "analyze scrolls horizontally"
             mp.locator(".samples button").nth(2).click()
-            mp.get_by_role("radio", name="Party").check()
+            mp.get_by_role("radio", name="Pesta").check()
             mp.screenshot(path=shots / "06-analyze-mobile.png", full_page=True)
-            mp.get_by_role("button", name="Analyze outfit").click()
-            expect(mp.get_by_role("heading", name="Your outfit analysis")).to_be_visible(timeout=20000)
+            mp.get_by_role("button", name="Buat rekomendasi").click()
+            expect(mp.get_by_role("heading", name="Hasil analisis pakaian")).to_be_visible(timeout=20000)
             assert no_horizontal_scroll(mp), "result scrolls horizontally"
             mp.screenshot(path=shots / "07-result-mobile.png", full_page=True)
             mp.goto(base + "/history")
@@ -237,6 +277,7 @@ def run(base, shots, headed):
             ("history -> detail navigation", history_to_detail),
             ("cross-user access blocked in UI", cross_user_blocked),
             ("profile edit + validation + prefill", profile_edit),
+            ("Digital Wardrobe create, edit, and delete", wardrobe_flow),
             ("delete with confirmation", delete_flow),
             ("logout + auth guard", logout_and_guard),
             ("login errors + redirect to next", login_flow),

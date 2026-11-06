@@ -23,6 +23,29 @@ _NAMED = {
     "burgundy": (110, 25, 45), "pink": (230, 160, 180), "orange": (220, 120, 40), "yellow": (230, 200, 60),
     "purple": (110, 60, 140),
 }
+_COLOR_LABELS = {
+    "black": "hitam",
+    "charcoal": "abu-abu arang",
+    "grey": "abu-abu",
+    "light grey": "abu-abu muda",
+    "white": "putih",
+    "cream": "krem",
+    "beige": "krem kecokelatan",
+    "camel": "cokelat muda",
+    "brown": "cokelat",
+    "navy": "biru dongker",
+    "blue": "biru",
+    "light blue": "biru muda",
+    "denim": "biru denim",
+    "green": "hijau",
+    "olive": "hijau zaitun",
+    "red": "merah",
+    "burgundy": "merah marun",
+    "pink": "merah muda",
+    "orange": "jingga",
+    "yellow": "kuning",
+    "purple": "ungu",
+}
 
 
 def _nearest_name(rgb):
@@ -61,23 +84,34 @@ class MockVisionProvider(VisionProvider):
     def analyze(self, request):
         started = time.monotonic()
         colors = measured_colors(request.image_bytes)
-        names = ", ".join(c["name"] for c in colors) or "neutral tones"
+        for color in colors:
+            color["name"] = _COLOR_LABELS.get(color["name"], color["name"])
+        names = ", ".join(c["name"] for c in colors) or "warna netral"
+        occasion = {
+            "casual": "kasual",
+            "campus": "kampus",
+            "work": "kerja",
+            "formal event": "acara formal",
+            "party": "pesta",
+        }.get(request.occasion.lower(), request.occasion)
+        if occasion.lower().startswith("other:"):
+            occasion = f"Lainnya:{occasion[6:]}"
         raw = {
             "visual_analysis": (
-                "[Development mock] No vision model was called. "
-                f"Pixel sampling found these dominant tones: {names}."
+                "[Data uji] Model visual tidak dipanggil. "
+                f"Pengambilan sampel piksel menemukan warna dominan: {names}."
             ),
             "clothing_items": [],
             "dominant_colors": colors,
-            "styling_observations": ["[Development mock] Placeholder observation for UI testing."],
+            "styling_observations": ["[Data uji] Ini adalah contoh tampilan hasil analisis."],
             "primary_recommendation": (
-                f"[Development mock] Placeholder recommendation for the '{request.occasion}' occasion. "
-                "Configure AI_PROVIDER=gemini to receive real Gemini styling advice."
+                f"[Data uji] Contoh rekomendasi untuk acara {occasion}. "
+                "Atur AI_PROVIDER ke layanan AI untuk mendapatkan saran gaya sebenarnya."
             ),
-            "color_suggestions": [{"palette": [c["name"] for c in colors[:2]], "note": "[Development mock] Measured colours only."}],
+            "color_suggestions": [{"palette": [c["name"] for c in colors[:2]], "note": "[Data uji] Warna diukur dari foto."}],
             "alternative_outfits": [],
-            "occasion_rationale": "[Development mock] No occasion reasoning was generated.",
-            "limitations": ["This result is a development fixture, not model output. Clothing items were not detected."],
+            "occasion_rationale": "[Data uji] Alasan khusus untuk acara tidak dibuat.",
+            "limitations": ["Hasil ini adalah data uji, bukan keluaran model AI. Pakaian tidak dideteksi."],
         }
         return ProviderResult(
             data=normalize_result(raw),

@@ -41,12 +41,12 @@ class AnalysisCreateSerializer(serializers.Serializer):
 
         if image is None and wardrobe_item_id is None:
             raise serializers.ValidationError(
-                {"image": "This field is required unless you select a wardrobe item."}
+                {"image": "Foto wajib diunggah kecuali kamu memilih pakaian dari Lemari Digital."}
             )
 
         if image and wardrobe_item_id:
             raise serializers.ValidationError(
-                "Provide either an uploaded image or a wardrobe item, but not both."
+                "Pilih foto yang diunggah atau pakaian dari Lemari Digital, jangan keduanya."
             )
 
         if image:

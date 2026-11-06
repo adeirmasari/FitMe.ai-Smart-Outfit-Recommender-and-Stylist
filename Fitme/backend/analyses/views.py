@@ -167,10 +167,7 @@ class AnalysisViewSet(
                 {
                     "error": {
                         "code": "provider_not_configured",
-                        "message": (
-                            "Outfit analysis is not available right now "
-                            "because no AI provider is configured."
-                        ),
+                        "message": "Analisis belum tersedia karena layanan AI belum dikonfigurasi.",
                     }
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

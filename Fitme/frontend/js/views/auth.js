@@ -52,7 +52,7 @@ function bindSubmit(form, button, alert, fields, action, ctx) {
     busy = true;
     const label = button.textContent;
     button.disabled = true;
-    button.replaceChildren(spinner(), " Please wait…");
+    button.replaceChildren(spinner(), " Mohon tunggu…");
     try {
       await action();
       ctx.navigate(safeNext(ctx.query), { replace: true });
@@ -80,22 +80,22 @@ function bindSubmit(form, button, alert, fields, action, ctx) {
 
 export function renderLogin(ctx) {
   const fields = {
-    username: field({ id: "username", label: "Username or email", autocomplete: "username", maxlength: 254 }),
-    password: field({ id: "password", label: "Password", type: "password", autocomplete: "current-password", maxlength: 128 }),
+    username: field({ id: "username", label: "Nama pengguna atau email", autocomplete: "username", maxlength: 254 }),
+    password: field({ id: "password", label: "Kata sandi", type: "password", autocomplete: "current-password", maxlength: 128 }),
   };
   const alert = h("div", { class: "alert", role: "alert", hidden: true });
-  const button = h("button", { class: "btn", type: "submit" }, "Sign in");
+  const button = h("button", { class: "btn", type: "submit" }, "Masuk");
   const expired = ctx.query.get("next") && !session.isAuthenticated();
   const form = h(
     "form",
     { class: "auth-form", novalidate: true },
-    h("div", {}, h("p", { class: "eyebrow" }, "Welcome back"), h("h1", {}, "Sign in")),
-    expired ? h("p", { class: "alert alert-info" }, "Sign in to continue.") : null,
+    h("div", {}, h("p", { class: "eyebrow" }, "Selamat datang kembali"), h("h1", {}, "Masuk")),
+    expired ? h("p", { class: "alert alert-info" }, "Masuk untuk melanjutkan.") : null,
     alert,
     fields.username.wrap,
     fields.password.wrap,
     button,
-    h("p", { class: "small muted" }, "New to FitMe.ai? ", h("a", { href: `/register${location.search}` }, "Create an account")),
+    h("p", { class: "small muted" }, "Belum menggunakan FitMe.ai? ", h("a", { href: `/register${location.search}` }, "Buat akun")),
   );
   bindSubmit(form, button, alert, fields, () => session.login(fields.username.input.value.trim(), fields.password.input.value), ctx);
   return shell(form);
@@ -105,35 +105,35 @@ export function renderRegister(ctx) {
   const fields = {
     username: field({
       id: "username",
-      label: "Username",
+      label: "Nama pengguna",
       autocomplete: "username",
-      hint: "3–30 letters, numbers, dots, dashes or underscores.",
+      hint: "3–30 karakter: huruf, angka, titik, tanda hubung, atau garis bawah.",
       maxlength: 30,
       minlength: 3,
     }),
     email: field({ id: "email", label: "Email", type: "email", autocomplete: "email", maxlength: 254 }),
     password: field({
       id: "password",
-      label: "Password",
+      label: "Kata sandi",
       type: "password",
       autocomplete: "new-password",
-      hint: "At least 8 characters. Avoid common or all-number passwords.",
+      hint: "Minimal 8 karakter. Hindari kata sandi umum atau yang hanya berisi angka.",
       minlength: 8,
       maxlength: 128,
     }),
   };
   const alert = h("div", { class: "alert", role: "alert", hidden: true });
-  const button = h("button", { class: "btn", type: "submit" }, "Create account");
+  const button = h("button", { class: "btn", type: "submit" }, "Buat akun");
   const form = h(
     "form",
     { class: "auth-form", novalidate: true },
-    h("div", {}, h("p", { class: "eyebrow" }, "Get started"), h("h1", {}, "Create your account")),
+    h("div", {}, h("p", { class: "eyebrow" }, "Mulai sekarang"), h("h1", {}, "Buat akun")),
     alert,
     fields.username.wrap,
     fields.email.wrap,
     fields.password.wrap,
     button,
-    h("p", { class: "small muted" }, "Already have an account? ", h("a", { href: `/login${location.search}` }, "Sign in")),
+    h("p", { class: "small muted" }, "Sudah memiliki akun? ", h("a", { href: `/login${location.search}` }, "Masuk")),
   );
   bindSubmit(
     form,

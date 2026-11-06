@@ -8,12 +8,12 @@ export const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const ACCEPTED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
 
 export const OCCASIONS = [
-  { value: "casual", label: "Casual" },
-  { value: "campus", label: "Campus" },
-  { value: "work", label: "Work" },
-  { value: "formal", label: "Formal event" },
-  { value: "party", label: "Party" },
-  { value: "other", label: "Other" },
+  { value: "casual", label: "Kasual" },
+  { value: "campus", label: "Kampus" },
+  { value: "work", label: "Kerja" },
+  { value: "formal", label: "Acara formal" },
+  { value: "party", label: "Pesta" },
+  { value: "other", label: "Lainnya" },
 ];
 
 export const TEXT_LIMITS = { occasion_detail: 80, preferred_style: 120, desired_impression: 120, additional_context: 300 };
@@ -26,26 +26,26 @@ export function formatBytes(bytes) {
 
 /** Synchronous checks on type and size. Returns an error message or null. */
 export function checkFile(file) {
-  if (!file) return "Choose a photo to analyze.";
+  if (!file) return "Pilih foto yang ingin dianalisis.";
   const name = (file.name || "").toLowerCase();
   const extOk = ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
   const typeOk = !file.type || ACCEPTED_TYPES.includes(file.type);
   if (!extOk || !typeOk) {
     if (name.endsWith(".heic") || name.endsWith(".heif") || file.type === "image/heic") {
-      return "HEIC photos aren't supported yet. Export the photo as JPEG and try again.";
+      return "Foto HEIC belum didukung. Simpan foto sebagai JPEG lalu coba lagi.";
     }
-    return "Use a JPEG, PNG or WebP image.";
+    return "Gunakan gambar berformat JPEG, PNG, atau WebP.";
   }
-  if (file.size === 0) return "That file is empty.";
-  if (file.size > MAX_BYTES) return `That photo is ${formatBytes(file.size)}. The limit is ${formatBytes(MAX_BYTES)}.`;
+  if (file.size === 0) return "File tersebut kosong.";
+  if (file.size > MAX_BYTES) return `Ukuran foto ${formatBytes(file.size)}. Batas ukuran ${formatBytes(MAX_BYTES)}.`;
   return null;
 }
 
 /** Checks decoded pixel dimensions. Returns an error message or null. */
 export function checkDimensions(width, height) {
-  if (!width || !height) return "This file couldn't be read as an image.";
-  if (Math.min(width, height) < MIN_SIDE) return `The photo is too small (${width}×${height}). Use at least ${MIN_SIDE}px per side.`;
-  if (Math.max(width, height) > MAX_SIDE) return `The photo is too large (${width}×${height}). Keep it under ${MAX_SIDE}px.`;
+  if (!width || !height) return "File ini tidak dapat dibaca sebagai gambar.";
+  if (Math.min(width, height) < MIN_SIDE) return `Resolusi foto terlalu kecil (${width}×${height}). Gunakan minimal ${MIN_SIDE}px pada setiap sisi.`;
+  if (Math.max(width, height) > MAX_SIDE) return `Resolusi foto terlalu besar (${width}×${height}). Gunakan maksimal ${MAX_SIDE}px pada setiap sisi.`;
   return null;
 }
 
@@ -60,7 +60,7 @@ export function validateBrief({ file, fileError, occasion, fields, source = "upl
   }
 
   if (!OCCASIONS.some((o) => o.value === occasion)) {
-    errors.occasion = "Choose the occasion you're dressing for.";
+    errors.occasion = "Pilih acara yang akan dihadiri.";
   }
 
   for (const [key, limit] of Object.entries(TEXT_LIMITS)) {
@@ -68,7 +68,7 @@ export function validateBrief({ file, fileError, occasion, fields, source = "upl
     if (key === "occasion_detail" && occasion !== "other") continue;
     const value = (fields?.[key] || "").trim();
     if (value.length > limit) {
-      errors[key] = `Keep this under ${limit} characters.`;
+      errors[key] = `Batasi isian ini hingga ${limit} karakter.`;
     }
   }
 

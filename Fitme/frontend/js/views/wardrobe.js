@@ -94,7 +94,7 @@ function dialogFor(item = null) {
   const heading = el("h2", {}, item ? "Edit pakaian" : "Tambah pakaian");
   const { form, name, category, color, image, imageError } = makeForm(item);
   const cancel = el("button", { class: "btn btn-ghost", type: "button" }, "Batal");
-  const submit = el("button", { class: "btn", type: "submit" }, item ? "Simpan perubahan" : "Upload pakaian");
+  const submit = el("button", { class: "btn", type: "submit" }, item ? "Simpan perubahan" : "Unggah pakaian");
   const actions = el("div", { class: "wardrobe-form-actions" }, cancel, submit);
 
   form.append(actions);
@@ -124,7 +124,7 @@ export async function renderWardrobe(ctx) {
       "div",
       {},
       el("span", { class: "eyebrow" }, "Lemari digital"),
-      el("h1", {}, "Digital Wardrobe"),
+      el("h1", {}, "Lemari Digital"),
       el("p", {}, "Simpan dan kelola koleksi pakaianmu dalam satu tempat."),
     ),
     el("button", { class: "btn", type: "button" }, "+ Tambah pakaian"),
@@ -324,7 +324,7 @@ export async function renderWardrobe(ctx) {
       } finally {
         if (submit.isConnected) {
           submit.disabled = false;
-          submit.textContent = "Upload pakaian";
+          submit.textContent = "Unggah pakaian";
         }
       }
     });
@@ -361,7 +361,7 @@ export async function renderWardrobe(ctx) {
   }
 
   async function deleteItem(item) {
-    const confirmed = window.confirm(`Hapus "${item.name || "pakaian ini"}" dari Digital Wardrobe?`);
+    const confirmed = window.confirm(`Hapus "${item.name || "pakaian ini"}" dari Lemari Digital?`);
     if (!confirmed) return;
 
     try {

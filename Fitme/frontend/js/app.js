@@ -15,14 +15,14 @@ const main = document.getElementById("main");
 const nav = document.getElementById("site-nav");
 const navToggle = document.querySelector(".nav-toggle");
 
-route("/", renderLanding, { title: "Outfit analysis and styling" });
-route("/login", renderLogin, { title: "Sign in" });
-route("/register", renderRegister, { title: "Create account" });
-route("/analyze", renderAnalyze, { auth: true, title: "Analyze an outfit" });
-route("/analyses/:id", renderResult, { auth: true, title: "Analysis" });
-route("/history", renderHistory, { auth: true, title: "History" });
-route("/profile", renderProfile, { auth: true, title: "Profile" });
-route("/wardrobe", renderWardrobe, { auth: true, title: "Digital Wardrobe" });
+route("/", renderLanding, { title: "Analisis pakaian dan penataan gaya" });
+route("/login", renderLogin, { title: "Masuk" });
+route("/register", renderRegister, { title: "Buat akun" });
+route("/analyze", renderAnalyze, { auth: true, title: "Analisis pakaian" });
+route("/analyses/:id", renderResult, { auth: true, title: "Hasil analisis" });
+route("/history", renderHistory, { auth: true, title: "Riwayat" });
+route("/profile", renderProfile, { auth: true, title: "Profil" });
+route("/wardrobe", renderWardrobe, { auth: true, title: "Lemari Digital" });
 
 let cleanups = [];
 let renderSeq = 0;
@@ -45,14 +45,14 @@ function renderNav() {
     h("a", { href, "aria-current": here === href || (href === "/history" && here.startsWith("/analyses/")) ? "page" : null }, label);
   if (session.isAuthenticated()) {
       nav.append(
-    link("/analyze", "Analyze"),
-    link("/history", "History"),
-    link("/wardrobe", "Wardrobe"),
-    link("/profile", "Profile"),
-    h("button", { class: "btn btn-ghost", type: "button", onclick: handleLogout }, "Sign out"),
+    link("/analyze", "Analisis"),
+    link("/history", "Riwayat"),
+    link("/wardrobe", "Lemari Digital"),
+    link("/profile", "Profil"),
+    h("button", { class: "btn btn-ghost", type: "button", onclick: handleLogout }, "Keluar"),
   );
   } else {
-    nav.append(link("/login", "Sign in"), h("a", { class: "btn", href: "/register" }, "Create account"));
+    nav.append(link("/login", "Masuk"), h("a", { class: "btn", href: "/register" }, "Buat akun"));
   }
 }
 
@@ -62,7 +62,7 @@ async function handleLogout() {
   } catch {
     // Local session is cleared regardless; the cookie is cleared server-side on success.
   }
-  toast("You're signed out.");
+  toast("Kamu telah keluar.");
   navigate("/", { replace: true });
 }
 
@@ -96,7 +96,7 @@ async function render() {
   };
 
   clear(main);
-  main.append(loadingState("Loading…"));
+  main.append(loadingState("Memuat…"));
   let view;
   try {
     view = await (matched ? matched.handler(ctx) : renderNotFound(ctx));
@@ -105,9 +105,9 @@ async function render() {
     view = h(
       "div",
       { class: "center-state" },
-      h("h1", { style: { fontSize: "var(--step-2)" } }, "This page couldn't load"),
-      h("p", { class: "muted" }, error?.message || "Please try again."),
-      h("button", { class: "btn btn-ghost", type: "button", onclick: () => render() }, "Try again"),
+      h("h1", { style: { fontSize: "var(--step-2)" } }, "Halaman tidak dapat dimuat"),
+      h("p", { class: "muted" }, error?.message || "Silakan coba lagi."),
+      h("button", { class: "btn btn-ghost", type: "button", onclick: () => render() }, "Coba lagi"),
     );
   }
   if (seq !== renderSeq) return; // a newer navigation won
@@ -132,7 +132,7 @@ navToggle.addEventListener("click", () => {
 onSessionExpired(() => {
   if (!session.isAuthenticated()) return;
   session.expire();
-  toast("Your session expired. Please sign in again.", { error: true });
+  toast("Sesi berakhir. Silakan masuk kembali.", { error: true });
   navigate(`/login?next=${encodeURIComponent(location.pathname)}`, { replace: true });
 });
 

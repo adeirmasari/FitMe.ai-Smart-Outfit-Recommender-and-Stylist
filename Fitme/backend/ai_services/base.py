@@ -7,35 +7,35 @@ class ProviderError(Exception):
     """Base class. `code` is stored on the analysis and shown to the user."""
 
     code = "provider_error"
-    user_message = "The styling model could not complete this analysis. Please try again."
+    user_message = "AI belum dapat menyelesaikan analisis ini. Silakan coba lagi."
     retryable = True
 
 
 class ProviderNotConfigured(ProviderError):
     code = "provider_not_configured"
-    user_message = "Outfit analysis is not available right now because no AI provider is configured."
+    user_message = "Analisis belum tersedia karena layanan AI belum dikonfigurasi."
     retryable = False
 
 
 class ProviderTimeout(ProviderError):
     code = "provider_timeout"
-    user_message = "The styling model took too long to respond. Please try again in a moment."
+    user_message = "AI terlalu lama merespons. Silakan coba lagi sebentar lagi."
 
 
 class ProviderUnavailable(ProviderError):
     code = "provider_unavailable"
-    user_message = "The styling model is temporarily unavailable. Please try again shortly."
+    user_message = "Layanan AI sedang tidak tersedia. Silakan coba lagi sebentar lagi."
 
 
 class ProviderRejected(ProviderError):
     code = "provider_rejected"
-    user_message = "The styling model rejected this request. Try a different photo."
+    user_message = "Layanan AI menolak permintaan ini. Coba gunakan foto lain."
     retryable = False
 
 
 class InvalidModelOutput(ProviderError):
     code = "invalid_model_output"
-    user_message = "The styling model returned an incomplete answer. Retrying usually fixes this."
+    user_message = "Jawaban AI tidak lengkap. Coba ulangi analisis ini."
 
 class WardrobeChanged(ProviderError):
     code = "wardrobe_changed"
@@ -49,8 +49,8 @@ class ImageNotClothing(ProviderError):
     code = "image_not_clothing"
     user_message = "Foto ditolak karena tidak terdeteksi sebagai pakaian."
     guidance = (
-        "Ganti dengan foto yang menampilkan pakaian secara jelas, misalnya atasan, bawahan, "
-        "sepatu, atau outfit yang sedang dipakai, dengan pencahayaan cukup dan tidak terpotong."
+        "Gunakan foto yang menampilkan pakaian secara jelas, misalnya atasan, bawahan, "
+        "sepatu, atau pakaian yang sedang dikenakan, dengan pencahayaan cukup dan tidak terpotong."
     )
     retryable = False
 

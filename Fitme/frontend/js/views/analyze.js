@@ -13,7 +13,7 @@ import {
   validateBrief,
 } from "../validation.js";
 
-const WARDROBE_UPLOAD_LABEL = "Mengirim koleksi ke Gemini…";
+const WARDROBE_UPLOAD_LABEL = "Mengirim koleksi pakaian…";
 
 function readDimensions(url) {
   return new Promise((resolve) => {
@@ -147,7 +147,7 @@ export async function renderAnalyze(ctx) {
       "aria-pressed": "true",
       onclick: () => switchSource("upload"),
     },
-    "Upload Foto Baru",
+    "Unggah foto baru",
   );
 
   const sourceWardrobeBtn = h(
@@ -158,7 +158,7 @@ export async function renderAnalyze(ctx) {
       "aria-pressed": "false",
       onclick: () => switchSource("wardrobe"),
     },
-    "Digital Wardrobe",
+    "Lemari digital",
   );
 
   const sourceSelector = h(
@@ -224,15 +224,15 @@ export async function renderAnalyze(ctx) {
 
       if (items.length === 0) {
         wardrobeStatus.textContent =
-          "Koleksi masih kosong. Tambahkan pakaian terlebih dahulu di Digital Wardrobe.";
+          "Koleksi masih kosong. Tambahkan pakaian terlebih dahulu di Lemari Digital.";
         return;
       }
 
       const hasTop = items.some((item) => item.category === "top");
       const hasBottom = items.some((item) => item.category === "bottom");
       wardrobeStatus.textContent = hasTop && hasBottom
-        ? `${items.length} item pakaian tersimpan. Rekomendasi akan dibuat dari koleksi ini.`
-        : "Tambahkan minimal satu atasan dan satu bawahan di Digital Wardrobe untuk membuat rekomendasi.";
+        ? `${items.length} pakaian tersimpan. Rekomendasi akan dibuat dari koleksi ini.`
+        : "Tambahkan minimal satu atasan dan satu bawahan di Lemari Digital untuk membuat rekomendasi.";
 
       const cards = await Promise.all(
         items.map(async (item) => {
@@ -309,9 +309,22 @@ export async function renderAnalyze(ctx) {
       wardrobeGrid.style.gap = "1rem";
       wardrobeGrid.replaceChildren(...cards);
     } catch (error) {
-      state.wardrobeError =
-        error.message || "Gagal memuat koleksi pakaian.";
-      wardrobeStatus.textContent = state.wardrobeError;
+      state.wardrobeError = error.message || "Gagal memuat koleksi pakaian.";
+      wardrobeStatus.replaceChildren(
+        state.wardrobeError,
+        h(
+          "button",
+          {
+            type: "button",
+            class: "btn-link",
+            onclick: () => {
+              state.wardrobeLoaded = false;
+              loadWardrobe();
+            },
+          },
+          "Coba muat lagi",
+        ),
+      );
     } finally {
       state.wardrobeLoading = false;
       updateSubmit();
@@ -332,6 +345,7 @@ export async function renderAnalyze(ctx) {
     wardrobePanel.hidden = useUpload;
     dropzone.hidden = !useUpload || Boolean(state.file);
     preview.hidden = !useUpload || !state.file;
+    photoRules.hidden = !useUpload;
     imageError.hidden = !useUpload || !state.fileError;
 
     if (samplesBlock) samplesBlock.hidden = !useUpload;
@@ -377,7 +391,7 @@ export async function renderAnalyze(ctx) {
       class: "btn",
       onclick: () => fileInput.click(),
     },
-    "Choose photo",
+    "Pilih foto",
   );
 
   const cameraBtn = hasCamera
@@ -388,7 +402,7 @@ export async function renderAnalyze(ctx) {
           class: "btn btn-ghost",
           onclick: () => cameraInput.click(),
         },
-        "Take photo",
+        "Ambil foto",
       )
     : null;
 
@@ -398,13 +412,13 @@ export async function renderAnalyze(ctx) {
     h(
       "div",
       {},
-      h("h2", {}, "Add an outfit photo"),
+      h("h2", {}, "Tambahkan foto pakaian"),
       h(
         "p",
         { class: "muted" },
         hasCamera
-          ? "Choose from your library or use the camera."
-          : "Drag a photo here, or choose one from your computer.",
+          ? "Pilih foto dari galeri atau gunakan kamera."
+          : "Seret foto ke sini atau pilih dari perangkat.",
       ),
       h(
         "div",
@@ -415,27 +429,26 @@ export async function renderAnalyze(ctx) {
             for: "photo",
             class: "visually-hidden",
           },
-          "Outfit photo",
+          "Foto pakaian",
         ),
         chooseBtn,
         cameraBtn,
       ),
-      h(
-        "p",
-        {
-          id: "photo-rules",
-          class: "small muted",
-          style: {
-            marginTop: "var(--space-4)",
-          },
-        },
-        `JPEG, PNG or WebP · up to ${formatBytes(MAX_BYTES)} · at least 200px per side`,
-      ),
     ),
   );
 
+  const photoRules = h(
+    "p",
+    {
+      id: "photo-rules",
+      class: "small muted",
+      style: { marginTop: "var(--space-3)" },
+    },
+    `Aturan foto: JPEG, PNG, atau WebP · maksimal ${formatBytes(MAX_BYTES)} · minimal 200 piksel pada setiap sisi.`,
+  );
+
   const previewImg = h("img", {
-    alt: "Preview of the selected outfit photo",
+    alt: "Pratinjau foto pakaian yang dipilih",
   });
 
   const fileMeta = h("span", {
@@ -466,7 +479,7 @@ export async function renderAnalyze(ctx) {
             class: "btn-link",
             onclick: () => fileInput.click(),
           },
-          "Replace",
+          "Ganti foto",
         ),
         h(
           "button",
@@ -475,7 +488,7 @@ export async function renderAnalyze(ctx) {
             class: "btn-link",
             onclick: () => setFile(null),
           },
-          "Remove",
+          "Hapus foto",
         ),
       ),
     ),
@@ -490,7 +503,7 @@ export async function renderAnalyze(ctx) {
         h(
           "p",
           { class: "small muted" },
-          "No photo handy? Try an outfit from the FitMe dataset:",
+          "Belum punya foto? Coba salah satu contoh pakaian:",
         ),
         h(
           "ul",
@@ -529,6 +542,7 @@ export async function renderAnalyze(ctx) {
   }
 
   async function setFile(file, { sampleKey = null } = {}) {
+    if (state.busy) return;
     revokePreview();
 
     state.file = file;
@@ -580,7 +594,7 @@ export async function renderAnalyze(ctx) {
 
     previewImg.src = state.previewUrl;
     fileMeta.textContent =
-      `${sampleKey ? `Dataset sample ${sampleKey}` : file.name} · ` +
+      `${sampleKey ? `Contoh dataset ${sampleKey}` : file.name} · ` +
       `${width}×${height} · ${formatBytes(file.size)}`;
 
     preview.hidden = false;
@@ -672,7 +686,7 @@ export async function renderAnalyze(ctx) {
       );
     } catch {
       showImageError(
-        "That sample couldn't be loaded. Try another one or upload your own photo.",
+        "Contoh foto tidak dapat dimuat. Coba contoh lain atau unggah foto sendiri.",
       );
     }
   }
@@ -733,30 +747,30 @@ export async function renderAnalyze(ctx) {
 
   const occasionDetail = textField({
     id: "occasion_detail",
-    label: "Describe the occasion",
-    hint: "e.g. gallery opening, job interview",
+    label: "Jelaskan acara",
+    hint: "Contoh: pembukaan galeri, wawancara kerja",
   });
 
   occasionDetail.wrap.hidden = true;
 
   const preferred = textField({
     id: "preferred_style",
-    label: "Preferred style",
-    hint: "e.g. minimal, streetwear, classic",
+    label: "Gaya yang disukai",
+    hint: "Contoh: minimalis, streetwear, klasik",
   });
 
   const impression = textField({
     id: "desired_impression",
-    label: "Impression you want to make",
-    hint: "e.g. approachable, confident, polished",
+    label: "Kesan yang ingin ditampilkan",
+    hint: "Contoh: ramah, percaya diri, rapi",
   });
 
   const context = textField({
     id: "additional_context",
-    label: "Anything else?",
+    label: "Catatan tambahan",
     hint: profile?.style_notes
-      ? "Pre-filled from your profile style notes."
-      : "Weather, dress code, pieces you'd like to keep.",
+      ? "Terisi dari catatan gaya di profil."
+      : "Cuaca, aturan berpakaian, atau pakaian yang ingin tetap digunakan.",
     multiline: true,
     value: (profile?.style_notes || "").slice(
       0,
@@ -772,7 +786,7 @@ export async function renderAnalyze(ctx) {
   };
 
   const formAlert = h("div", {
-    class: "alert",
+    class: "alert form-alert",
     role: "alert",
     hidden: true,
   });
@@ -783,7 +797,7 @@ export async function renderAnalyze(ctx) {
       type: "submit",
       class: "btn btn-accent",
     },
-    "Generate recommendation",
+    "Buat rekomendasi",
   );
 
   const progressFill = h("div", {
@@ -822,7 +836,7 @@ export async function renderAnalyze(ctx) {
     h(
       "div",
       {},
-      h("h2", {}, "The brief"),
+      h("h2", {}, "Detail kebutuhan"),
     ),
     h(
       "fieldset",
@@ -830,8 +844,8 @@ export async function renderAnalyze(ctx) {
       h(
         "legend",
         {},
-        "Occasion ",
-        h("span", { class: "muted" }, "(required)"),
+        "Acara ",
+        h("span", { class: "muted" }, "(wajib)"),
       ),
       h(
         "div",
@@ -847,8 +861,8 @@ export async function renderAnalyze(ctx) {
       h(
         "div",
         { class: "optional-head" },
-        h("p", { class: "eyebrow" }, "Preferences"),
-        h("span", { class: "small muted" }, "Optional"),
+        h("p", { class: "eyebrow" }, "Preferensi"),
+        h("span", { class: "small muted" }, "Opsional"),
       ),
       preferred.wrap,
       impression.wrap,
@@ -889,21 +903,21 @@ export async function renderAnalyze(ctx) {
 
     if (state.source === "wardrobe") {
       if (state.wardrobeLoading) {
-        missing.push("wardrobe loading to finish");
+        missing.push("koleksi selesai dimuat");
         wardrobeNotReady = true;
       } else if (
         !state.wardrobeItems.some((item) => item.category === "top") ||
         !state.wardrobeItems.some((item) => item.category === "bottom")
       ) {
-        missing.push("at least one top and one bottom in Wardrobe");
+        missing.push("minimal satu atasan dan satu bawahan di Lemari Digital");
         wardrobeNotReady = true;
       }
     } else if (!state.file) {
-      missing.push("a photo");
+      missing.push("foto");
     }
 
     if (!selectedOccasion()) {
-      missing.push("an occasion");
+      missing.push("acara");
     }
 
     const providerBlocked =
@@ -930,8 +944,8 @@ export async function renderAnalyze(ctx) {
       ? ""
       : providerBlocked
         ? state.source === "wardrobe"
-          ? "Aktifkan Gemini API untuk membuat rekomendasi."
-          : "AI belum tersedia untuk analisis foto."
+          ? "Layanan AI untuk rekomendasi Lemari Digital belum tersedia."
+          : "Layanan AI belum tersedia untuk menganalisis foto."
         : missing.length
           ? `Lengkapi ${missing.join(" dan ")} untuk melanjutkan.`
           : "";
@@ -1034,6 +1048,18 @@ export async function renderAnalyze(ctx) {
     state.busy = true;
     state.controller = new AbortController();
 
+    fileInput.disabled = true;
+    cameraInput.disabled = true;
+    chooseBtn.disabled = true;
+    sourceUploadBtn.disabled = true;
+    sourceWardrobeBtn.disabled = true;
+    preview.querySelectorAll("button").forEach((button) => {
+      button.disabled = true;
+    });
+    sampleButtons.forEach((button) => {
+      button.disabled = true;
+    });
+
     form
       .querySelectorAll("input, textarea")
       .forEach((element) => {
@@ -1042,7 +1068,7 @@ export async function renderAnalyze(ctx) {
 
     submitBtn.replaceChildren(
       spinner(),
-      " Analyzing…",
+      " Menganalisis…",
     );
 
     updateSubmit();
@@ -1055,7 +1081,7 @@ export async function renderAnalyze(ctx) {
 
     progressLabel.textContent = isWardrobe
       ? "Menyiapkan koleksi pakaian…"
-      : "Uploading photo…";
+      : "Mengunggah foto…";
 
     try {
       const result = await upload(
@@ -1072,7 +1098,7 @@ export async function renderAnalyze(ctx) {
 
             progressLabel.textContent = isWardrobe
               ? WARDROBE_UPLOAD_LABEL
-              : `Uploading photo... ${Math.round(fraction * 100)}%`;
+              : `Mengunggah foto... ${Math.round(fraction * 100)}%`;
           },
 
           onUploaded: () => {
@@ -1082,8 +1108,8 @@ export async function renderAnalyze(ctx) {
             );
 
             progressLabel.textContent = isWardrobe
-              ? "Gemini sedang menyusun kombinasi pakaian…"
-              : "AI sedang menganalisis foto…";
+              ? "AI sedang menyusun kombinasi pakaian. Proses dapat memerlukan waktu hingga dua menit."
+              : "AI sedang menganalisis foto. Proses dapat memerlukan waktu hingga dua menit.";
           },
         },
       );
@@ -1152,13 +1178,54 @@ export async function renderAnalyze(ctx) {
       }
 
       if (!Object.keys(fieldErrors).length) {
+        const code = error.code || "error";
+        const heading = code === "network_error"
+          ? "Koneksi ke server terputus."
+          : code === "timeout"
+            ? "Respons terlalu lama."
+            : code === "provider_not_configured"
+              ? "Layanan AI belum tersedia."
+              : "Analisis belum dapat dimulai.";
+        const message = code === "network_error"
+          ? "Periksa koneksi internet, lalu coba lagi."
+          : code === "timeout"
+            ? "Periksa Riwayat terlebih dahulu. Jika hasil belum muncul, kirim ulang analisis."
+            : error.message;
+        const actions = [];
+
+        if (code === "provider_not_configured") {
+          actions.push(h(
+            "button",
+            {
+              type: "button",
+              class: "btn btn-ghost",
+              onclick: () => ctx.navigate("/analyze", { replace: true }),
+            },
+            "Periksa status AI",
+          ));
+        } else {
+          actions.push(h(
+            "button",
+            {
+              type: "button",
+              class: "btn btn-ghost",
+              onclick: () => form.requestSubmit(),
+            },
+            "Coba lagi",
+          ));
+          if (code === "timeout") {
+            actions.push(h(
+              "a",
+              { class: "btn btn-ghost", href: "/history" },
+              "Buka Riwayat",
+            ));
+          }
+        }
+
         formAlert.replaceChildren(
-          h(
-            "strong",
-            {},
-            "The analysis didn't start.",
-          ),
-          error.message,
+          h("strong", {}, heading),
+          message,
+          h("div", { class: "alert-actions" }, actions),
         );
         formAlert.hidden = false;
       }
@@ -1172,7 +1239,19 @@ export async function renderAnalyze(ctx) {
             element.disabled = false;
           });
 
-        submitBtn.textContent = "Generate recommendation";
+        fileInput.disabled = false;
+        cameraInput.disabled = false;
+        chooseBtn.disabled = false;
+        sourceUploadBtn.disabled = false;
+        sourceWardrobeBtn.disabled = false;
+        preview.querySelectorAll("button").forEach((button) => {
+          button.disabled = false;
+        });
+        sampleButtons.forEach((button) => {
+          button.disabled = false;
+        });
+
+        submitBtn.textContent = "Buat rekomendasi";
         progress.hidden = true;
         updateSubmit();
       }
@@ -1192,6 +1271,15 @@ export async function renderAnalyze(ctx) {
 
   // Informasi status AI
   let banner = null;
+  const checkServiceButton = h(
+    "button",
+    {
+      type: "button",
+      class: "btn btn-ghost",
+      onclick: () => ctx.navigate("/analyze", { replace: true }),
+    },
+    "Periksa lagi",
+  );
 
   if (!health) {
     banner = h(
@@ -1203,9 +1291,10 @@ export async function renderAnalyze(ctx) {
       h(
         "strong",
         {},
-        "Can't reach the FitMe.ai server.",
+        "Tidak dapat terhubung ke server FitMe.ai.",
       ),
-      "Check your connection, then reload the page.",
+      "Periksa koneksi internet, lalu muat ulang halaman.",
+      h("div", { class: "alert-actions" }, checkServiceButton),
     );
   } else if (!providerReady) {
     banner = h(
@@ -1217,9 +1306,10 @@ export async function renderAnalyze(ctx) {
       h(
         "strong",
         {},
-        "Analysis is unavailable right now.",
+        "Layanan AI belum tersedia.",
       ),
-      "Gemini belum dikonfigurasi; analisis dan rekomendasi Wardrobe belum tersedia.",
+      "AI belum dikonfigurasi, sehingga analisis foto dan rekomendasi Lemari Digital belum dapat dibuat.",
+      h("div", { class: "alert-actions" }, checkServiceButton),
     );
   } else if (provider.is_mock) {
     banner = h(
@@ -1231,9 +1321,9 @@ export async function renderAnalyze(ctx) {
       h(
         "strong",
         {},
-        "Development mock mode.",
+        "Mode data uji aktif.",
       ),
-      "Hasil di server ini adalah data uji, bukan rekomendasi Gemini.",
+      "Hasil di server ini adalah data uji, bukan rekomendasi dari AI.",
     );
   }
 
@@ -1255,19 +1345,19 @@ export async function renderAnalyze(ctx) {
         h(
           "p",
           { class: "eyebrow" },
-          "Workspace",
+          "Ruang analisis",
         ),
         h(
           "h1",
           {},
-          "Analyze an outfit",
+          "Analisis pakaian",
         ),
         h(
           "p",
           {},
           providerReady && !provider.is_mock
-            ? `Analysis by ${provider.model}.`
-            : "Upload a photo or use your Digital Wardrobe, then tell us the occasion.",
+            ? `Analisis menggunakan ${provider.model}.`
+            : "Unggah foto atau pilih pakaian dari Lemari Digital, lalu tentukan acaranya.",
         ),
       ),
       h(
@@ -1276,7 +1366,7 @@ export async function renderAnalyze(ctx) {
           href: "/history",
           class: "small",
         },
-        "View history",
+        "Lihat riwayat",
       ),
     ),
     banner
@@ -1298,12 +1388,13 @@ export async function renderAnalyze(ctx) {
       h(
         "section",
         {
-          "aria-label": "Outfit photo",
+          "aria-label": "Foto pakaian",
         },
         sourceSelector,
         wardrobePanel,
         dropzone,
         preview,
+        photoRules,
         imageError,
         fileInput,
         cameraInput,
@@ -1312,7 +1403,7 @@ export async function renderAnalyze(ctx) {
       h(
         "section",
         {
-          "aria-label": "Occasion and preferences",
+          "aria-label": "Acara dan preferensi",
         },
         form,
       ),

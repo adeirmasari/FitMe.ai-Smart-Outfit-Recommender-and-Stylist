@@ -12,19 +12,19 @@ test("accepts jpeg/png/webp within size", () => {
 });
 
 test("rejects missing, wrong type, HEIC, empty and oversize files", () => {
-  assert.match(checkFile(null), /Choose a photo/);
-  assert.match(checkFile(file("a.gif", "image/gif")), /JPEG, PNG or WebP/);
-  assert.match(checkFile(file("a.jpg", "text/plain")), /JPEG, PNG or WebP/);
+  assert.match(checkFile(null), /Pilih foto/);
+  assert.match(checkFile(file("a.gif", "image/gif")), /JPEG, PNG, atau WebP/);
+  assert.match(checkFile(file("a.jpg", "text/plain")), /JPEG, PNG, atau WebP/);
   assert.match(checkFile(file("IMG_1.HEIC", "image/heic")), /HEIC/);
-  assert.match(checkFile(file("a.jpg", "image/jpeg", 0)), /empty/);
-  assert.match(checkFile(file("a.jpg", "image/jpeg", MAX_BYTES + 1)), /limit is 8\.0 MB/);
+  assert.match(checkFile(file("a.jpg", "image/jpeg", 0)), /kosong/);
+  assert.match(checkFile(file("a.jpg", "image/jpeg", MAX_BYTES + 1)), /Batas ukuran 8\.0 MB/);
 });
 
 test("dimension rules", () => {
   assert.equal(checkDimensions(640, 800), null);
-  assert.match(checkDimensions(150, 800), /too small/);
-  assert.match(checkDimensions(9000, 800), /too large/);
-  assert.match(checkDimensions(0, 0), /couldn't be read/);
+  assert.match(checkDimensions(150, 800), /terlalu kecil/);
+  assert.match(checkDimensions(9000, 800), /terlalu besar/);
+  assert.match(checkDimensions(0, 0), /tidak dapat dibaca/);
 });
 
 test("brief validation requires photo and occasion and caps text", () => {
@@ -48,16 +48,17 @@ test("normalizeError uses server envelope or a status fallback", () => {
   assert.equal(e.code, "validation_error");
   assert.equal(e.message, "Bad image");
   assert.deepEqual(e.fields, { image: ["Bad image"] });
-  assert.match(normalizeError(0, null).message, /Can't reach/);
+  assert.match(normalizeError(0, null).message, /Periksa koneksi internet/);
   assert.equal(normalizeError(0, null).code, "network_error");
-  assert.match(normalizeError(504, "<html>").message, /too long/);
-  assert.match(normalizeError(418, null).message, /Something went wrong/);
+  assert.match(normalizeError(503, null).message, /AI belum tersedia/);
+  assert.match(normalizeError(504, "<html>").message, /terlalu lama/);
+  assert.match(normalizeError(418, null).message, /Terjadi gangguan/);
 });
 
 test("missing photo is reported on the image field", () => {
   const { valid, errors } = validateBrief({ file: null, occasion: "work", fields: {} });
   assert.equal(valid, false);
-  assert.match(errors.image, /Choose a photo/);
+  assert.match(errors.image, /Pilih foto/);
   // Wardrobe source does not need an uploaded photo.
   assert.equal(validateBrief({ file: null, occasion: "work", fields: {}, source: "wardrobe" }).errors.image, undefined);
 });
