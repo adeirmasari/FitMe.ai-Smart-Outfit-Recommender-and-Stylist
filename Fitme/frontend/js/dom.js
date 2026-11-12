@@ -48,6 +48,17 @@ export function loadingState(label) {
 export function toast(message, { error = false, timeout = 4000 } = {}) {
   const region = document.querySelector(".toast-region");
   if (!region) return;
+  const dialog = document.querySelector("dialog[open]");
+  if (dialog && !dialog.contains(region)) {
+    dialog.append(region);
+    dialog.addEventListener(
+      "close",
+      () => {
+        if (region.parentElement === dialog) document.body.append(region);
+      },
+      { once: true },
+    );
+  }
   const item = h("div", { class: `toast${error ? " error" : ""}` }, message);
   region.append(item);
   setTimeout(() => item.remove(), timeout);
