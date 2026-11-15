@@ -9,7 +9,10 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from .imaging import validate_and_process
 
 
-def build_wardrobe_collage(items):
+def build_wardrobe_collage(items, start_index=1):
+    """Build one readable page; start_index preserves global W-labels."""
+    if not items:
+        raise ValueError("Cannot build an empty wardrobe collage")
     width, height, columns = 320, 360, 3
     canvas = Image.new(
         "RGB",
@@ -44,7 +47,7 @@ def build_wardrobe_collage(items):
         )
         draw.text(
             (x + 16, y + 318),
-            f"W{index + 1}  {item.category}",
+            f"W{start_index + index}  {item.category}",
             fill="black",
             font=font,
         )

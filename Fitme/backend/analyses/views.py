@@ -282,13 +282,13 @@ class AnalysisViewSet(
             WardrobeItem.objects.filter(
                 owner=request.user,
                 category="top",
-            ).order_by("-created_at")[:6]
+            ).order_by("-created_at")
         )
         bottoms = list(
             WardrobeItem.objects.filter(
                 owner=request.user,
                 category="bottom",
-            ).order_by("-created_at")[:6]
+            ).order_by("-created_at")
         )
 
         if not tops or not bottoms:
@@ -316,7 +316,9 @@ class AnalysisViewSet(
             for index, item in enumerate(items, start=1)
         ]
 
-        processed = build_wardrobe_collage(items)
+        # Simpan kolase halaman pertama sebagai thumbnail analisis.
+        # Halaman berikutnya dibuat saat inference agar semua item tetap terbaca.
+        processed = build_wardrobe_collage(items[:12], start_index=1)
 
         fields = dict(serializer.validated_data)
         if fields["occasion"] != "other":

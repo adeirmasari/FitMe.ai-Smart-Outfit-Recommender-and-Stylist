@@ -21,6 +21,7 @@ from ai_services.base import (
 from ai_services.providers import get_provider
 
 from .imaging import model_input
+from .wardrobe_collage import build_wardrobe_collage
 from .models import AnalysisStatus, OutfitAnalysis, OutfitRecommendation, WardrobeItem
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,32 @@ def run_analysis(analysis, provider=None):
             live = owned_categories()
             if any(live.get(entry["id"]) != entry["category"] for entry in catalog):
                 raise WardrobeChanged("Wardrobe item deleted or changed category")
+
+            # Rebuild remaining pages in snapshot order. The first page is the
+            # persisted analysis image; subsequent pages are sent as extra inputs.
+            live_items = {
+                str(item.id): item
+                for item in WardrobeItem.objects.filter(
+                    owner=analysis.owner, id__in=item_ids
+                )
+            }
+            ordered_items = [live_items[entry["id"]] for entry in catalog]
+            extra_pages = []
+            for offset in range(12, len(ordered_items), 12):
+                page = build_wardrobe_collage(
+                    ordered_items[offset:offset + 12],
+                    start_index=offset + 1,
+                )
+                extra_pages.append(model_input(page.full))
+            request = AnalysisRequest(
+                image_bytes=request.image_bytes,
+                image_mime=request.image_mime,
+                occasion=request.occasion,
+                preferred_style=request.preferred_style,
+                desired_impression=request.desired_impression,
+                additional_context=request.additional_context,
+                additional_image_bytes=tuple(extra_pages),
+            )
 
             recommend = getattr(provider, "recommend_wardrobe", None)
             if not callable(recommend):

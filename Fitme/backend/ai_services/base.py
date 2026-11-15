@@ -73,6 +73,8 @@ class AnalysisRequest:
     preferred_style: str = ""
     desired_impression: str = ""
     additional_context: str = ""
+    # Extra wardrobe collage pages; regular photo analysis leaves this empty.
+    additional_image_bytes: tuple[bytes, ...] = ()
 
 
 @dataclass

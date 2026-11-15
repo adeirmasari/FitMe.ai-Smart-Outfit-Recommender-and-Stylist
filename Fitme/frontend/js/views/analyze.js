@@ -211,13 +211,24 @@ export async function renderAnalyze(ctx) {
     wardrobeGrid.replaceChildren();
 
     try {
-      const response = await request(
-        "/api/wardrobe/?page_size=50",
-      );
+      let response = await request("/api/wardrobe/?page_size=50");
+      const items = [];
 
-      const items = Array.isArray(response)
-        ? response
-        : response.results || [];
+      if (Array.isArray(response)) {
+        items.push(...response);
+      } else {
+        items.push(...(response.results || []));
+        let nextUrl = response.next;
+        while (nextUrl) {
+          response = await request(nextUrl);
+          if (Array.isArray(response)) {
+            items.push(...response);
+            break;
+          }
+          items.push(...(response.results || []));
+          nextUrl = response.next;
+        }
+      }
 
       state.wardrobeItems = items;
       state.wardrobeLoaded = true;
@@ -1353,9 +1364,7 @@ export async function renderAnalyze(ctx) {
         h(
           "p",
           {},
-          providerReady && !provider.is_mock
-            ? `Analysis powered by ${provider.model}.`
-            : "Upload a photo or choose items from your Digital Wardrobe, then select an occasion.",
+          "Upload a photo or choose items from your Digital Wardrobe, then select an occasion.",
         ),
       ),
       h(

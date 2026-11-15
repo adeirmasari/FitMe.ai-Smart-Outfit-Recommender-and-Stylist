@@ -42,7 +42,7 @@ class GeminiProvider(VisionProvider):
     def is_configured(self):
         return bool(self.config.get("API_KEY") and self.model)
 
-    def _generate(self, image_bytes, system, prompt):
+    def _generate(self, image_bytes, system, prompt, additional_images=()):
         if not self.is_configured():
             raise ProviderNotConfigured(
                 "GEMINI_API_KEY / GEMINI_MODEL missing"
@@ -69,6 +69,15 @@ class GeminiProvider(VisionProvider):
                                 ).decode("ascii"),
                             }
                         },
+                        *[
+                            {
+                                "inlineData": {
+                                    "mimeType": "image/jpeg",
+                                    "data": base64.b64encode(extra).decode("ascii"),
+                                }
+                            }
+                            for extra in additional_images
+                        ],
                     ],
                 }
             ],
@@ -222,8 +231,9 @@ class GeminiProvider(VisionProvider):
         )
 
         system = (
-            "You are FitMe's stylist. The photo is a collage of the user's "
-            "clothing labeled W1, W2, and so on. Only choose labels in the "
+            "You are FitMe's stylist. The user message contains one or more "
+            "wardrobe collage pages. Items are labeled W1, W2, and so on "
+            "across all pages. Inspect every page before choosing. Only choose labels in the "
             "catalog. Each outfit must contain exactly one top and one bottom. "
             "Provide two different combinations when possible; provide one "
             "if that is all that is available. Explain why each outfit works for the "
@@ -252,6 +262,7 @@ class GeminiProvider(VisionProvider):
             request.image_bytes,
             system,
             prompt,
+            additional_images=request.additional_image_bytes,
         )
         return ProviderResult(
             data=normalize_wardrobe_result(
@@ -262,6 +273,6 @@ class GeminiProvider(VisionProvider):
             model=self.model,
             is_mock=False,
             latency_ms=latency,
-            prompt_version="fitme-gemini-wardrobe-v3",
+            prompt_version="fitme-gemini-wardrobe-v4",
             metadata=metadata,
         )
