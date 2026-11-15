@@ -192,29 +192,84 @@ export async function renderWardrobe(ctx) {
     }
   }
 
-  async function refresh() {
-    if (loading || disposed) return;
-    loading = true;
-    status.hidden = false;
-    grid.hidden = true;
-    status.textContent = "Loading wardrobe...";
-    try {
-      const data = await request(API);
-      if (disposed || !ctx.isCurrent()) return;
-      items = Array.isArray(data) ? data : data?.results || [];
-      await loadImages();
-      if (disposed || !ctx.isCurrent()) return;
-      renderCategories();
-      status.hidden = true;
-      grid.hidden = false;
-      renderGrid();
-    } catch (error) {
-      if (disposed || !ctx.isCurrent()) return;
-      clear(status);
-      status.append(el("h2", {}, "Could not load wardrobe"), el("p", {}, error.message || "Please try again."),
-        el("button", { class: "btn btn-ghost", type: "button", onclick: refresh }, "Try again"));
-    } finally { loading = false; }
+
+async function refresh() {
+  if (loading || disposed) return;
+
+  loading = true;
+  status.hidden = false;
+  grid.hidden = true;
+  status.textContent = "Loading wardrobe...";
+
+  try {
+    let nextUrl = API;
+    const allItems = [];
+
+    // Ambil seluruh halaman data dari API.
+    while (nextUrl) {
+      const data = await request(nextUrl);
+
+      // Mendukung respons API tanpa pagination.
+      if (Array.isArray(data)) {
+        allItems.push(...data);
+        nextUrl = null;
+        break;
+      }
+
+      allItems.push(...(data.results || []));
+
+      if (data.next) {
+        const next = new URL(data.next, location.origin);
+
+        if (next.origin !== location.origin) {
+          throw new Error("Invalid wardrobe pagination URL.");
+        }
+
+        nextUrl = next.pathname + next.search;
+      } else {
+        nextUrl = null;
+      }
+
+      if (disposed) return;
+    }
+
+    if (disposed || !ctx.isCurrent()) return;
+
+    items = allItems;
+
+    await loadImages();
+
+    if (disposed || !ctx.isCurrent()) return;
+
+    renderCategories();
+    status.hidden = true;
+    grid.hidden = false;
+    renderGrid();
+
+  } catch (error) {
+    if (disposed || !ctx.isCurrent()) return;
+
+    clear(status);
+
+    status.append(
+      el("h2", {}, "Could not load wardrobe"),
+      el("p", {}, error.message || "Please try again."),
+      el(
+        "button",
+        {
+          class: "btn btn-ghost",
+          type: "button",
+          onclick: refresh,
+        },
+        "Try again",
+      ),
+    );
+
+  } finally {
+    loading = false;
   }
+}
+
 
   async function addItem() {
     const { dialog, form, name, category, color, submit, image, imageError } = dialogFor();
