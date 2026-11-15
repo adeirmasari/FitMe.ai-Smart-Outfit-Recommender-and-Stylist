@@ -190,6 +190,70 @@ function observations(rec) {
   );
 }
 
+
+
+function colorName(hex) {
+  const colorPalette = [
+    { name: "White", hex: "#ffffff" },
+    { name: "Ivory", hex: "#f5f5dc" },
+    { name: "Cream", hex: "#fffdd0" },
+    { name: "Beige", hex: "#d2b48c" },
+    { name: "Light Gray", hex: "#d3d3d3" },
+    { name: "Gray", hex: "#808080" },
+    { name: "Black", hex: "#000000" },
+    { name: "Dusty Rose", hex: "#dca3a3" },
+    { name: "Pastel Pink", hex: "#d9c3cb" },
+    { name: "Pink", hex: "#ffc0cb" },
+    { name: "Rose", hex: "#b76e79" },
+    { name: "Dusty Mauve", hex: "#a38690" },
+    { name: "Lavender", hex: "#e6e6fa" },
+    { name: "Purple", hex: "#800080" },
+    { name: "Peach", hex: "#ffcba4" },
+    { name: "Yellow", hex: "#ffff00" },
+    { name: "Mustard", hex: "#e1ad01" },
+    { name: "Sage Green", hex: "#b2ac88" },
+    { name: "Mint", hex: "#98ff98" },
+    { name: "Green", hex: "#008000" },
+    { name: "Teal", hex: "#008080" },
+    { name: "Sky Blue", hex: "#87ceeb" },
+    { name: "Light Blue", hex: "#add8e6" },
+    { name: "Blue", hex: "#0000ff" },
+    { name: "Navy", hex: "#000080" },
+    { name: "Brown", hex: "#a52a2a" },
+    { name: "Chocolate", hex: "#7b3f00" },
+  ];
+
+  function toRgb(value) {
+    const normalized = value.replace("#", "");
+
+    return [
+      parseInt(normalized.slice(0, 2), 16),
+      parseInt(normalized.slice(2, 4), 16),
+      parseInt(normalized.slice(4, 6), 16),
+    ];
+  }
+
+  const target = toRgb(hex);
+  let closestColor = colorPalette[0];
+  let smallestDistance = Infinity;
+
+  for (const color of colorPalette) {
+    const rgb = toRgb(color.hex);
+
+    const distance =
+      (target[0] - rgb[0]) ** 2 +
+      (target[1] - rgb[1]) ** 2 +
+      (target[2] - rgb[2]) ** 2;
+
+    if (distance < smallestDistance) {
+      smallestDistance = distance;
+      closestColor = color;
+    }
+  }
+
+  return closestColor.name;
+}
+
 function recommendations(rec, occasionLabel) {
   const out = [
     h(
@@ -234,9 +298,32 @@ function recommendations(rec, occasionLabel) {
               {},
               suggestion.palette.length
                 ? h(
-                    "span",
+                    "div",
                     { class: "palette" },
-                    suggestion.palette.join(" + "),
+                    
+                    suggestion.palette.map((color) => {
+                      const hex = safeHex(color);
+                      const name = hex ? colorName(hex) : "Unknown Color";
+
+                      return h(
+                        "div",
+                        {
+                          class: "palette-color",
+                          title: hex || "Invalid color",
+                        },
+                        [
+                          h("span", {
+                            class: "palette-swatch",
+                            "aria-hidden": "true",
+                            style: hex
+                              ? { backgroundColor: hex }
+                              : {},
+                          }),
+                          h("span", { class: "palette-name" }, name),
+                          h("span", { class: "palette-hex" }, hex || color),
+                        ],
+                      );
+                    }),
                   )
                 : null,
               suggestion.note

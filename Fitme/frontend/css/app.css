@@ -641,3 +641,65 @@ body > dialog[aria-labelledby^="dlg-"] .dialog-actions { display: flex; justify-
   .history-stat-card { padding: var(--space-3); }
   .history-stat-note { font-size: 0.68rem; }
 }
+
+/* Color combination palette */
+.palette-swatch {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 50%;
+}
+
+.palette-name {
+  font-weight: 600;
+  text-align: center;
+}
+
+.palette-hex {
+  font-size: 0.75rem;
+  color: var(--muted, #777);
+  text-align: center;
+}
+
+
+/* Fix color combination layout */
+.result-block .pairings .palette {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: flex-start !important;
+  gap: 24px !important;
+  margin-bottom: 14px;
+}
+
+.result-block .pairings .palette .palette-color {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  min-width: 90px;
+}
+
+.result-block .pairings .palette .palette-swatch {
+  display: block !important;
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  border-radius: 50% !important;
+}
+
+.result-block .pairings .palette .palette-name {
+  display: block !important;
+  font-weight: 600;
+  text-align: center;
+}
+
+.result-block .pairings .palette .palette-hex {
+  display: block !important;
+  font-size: 0.75rem;
+  color: var(--muted, #777);
+  text-align: center;
+}
