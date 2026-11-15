@@ -14,6 +14,7 @@ import { renderWardrobe } from "./views/wardrobe.js";
 const main = document.getElementById("main");
 const nav = document.getElementById("site-nav");
 const navToggle = document.querySelector(".nav-toggle");
+const toastRegion = document.querySelector(".toast-region");
 
 route("/", renderLanding, { title: "Outfit analysis and personal styling" });
 route("/login", renderLogin, { title: "Log in" });
@@ -27,6 +28,36 @@ route("/wardrobe", renderWardrobe, { auth: true, title: "Digital Wardrobe" });
 let cleanups = [];
 let renderSeq = 0;
 let firstRender = true;
+let networkNotice = null;
+let reconnectTimeout = null;
+let wasOffline = !navigator.onLine;
+
+function showNetworkNotice(offline) {
+  if (!networkNotice) {
+    networkNotice = h("div", { class: "toast network-toast" });
+    toastRegion.append(networkNotice);
+  }
+
+  networkNotice.className = `toast network-toast${offline ? " error" : ""}`;
+  const content = offline
+    ? [h("span", { class: "spinner", "aria-hidden": "true" }), "Tidak ada koneksi internet. Menunggu jaringan…"]
+    : ["Jaringan berhasil terhubung. Memuat ulang halaman…"];
+  networkNotice.replaceChildren(...content);
+}
+
+function handleOffline() {
+  wasOffline = true;
+  clearTimeout(reconnectTimeout);
+  reconnectTimeout = null;
+  showNetworkNotice(true);
+}
+
+function handleOnline() {
+  if (!wasOffline) return;
+  wasOffline = false;
+  showNetworkNotice(false);
+  reconnectTimeout = setTimeout(() => window.location.reload(), 1200);
+}
 
 function runCleanups() {
   for (const fn of cleanups.splice(0)) {
@@ -128,6 +159,10 @@ navToggle.addEventListener("click", () => {
   const open = nav.classList.toggle("open");
   navToggle.setAttribute("aria-expanded", String(open));
 });
+
+window.addEventListener("offline", handleOffline);
+window.addEventListener("online", handleOnline);
+if (wasOffline) showNetworkNotice(true);
 
 onSessionExpired(() => {
   if (!session.isAuthenticated()) return;
